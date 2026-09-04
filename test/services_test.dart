@@ -201,7 +201,9 @@ void main() {
       expect(active.isActive, isTrue);
 
       final all = await AttendanceService.instance.allEvents();
-      expect(all.length, 1);
+      // Default "General Attendance" + the seeded demo "Intrams" event.
+      expect(all.length, 2);
+      expect(all.any((e) => e.usesTimeInOut), isTrue);
     });
 
     test('scans are recorded to the active event', () async {
@@ -317,26 +319,25 @@ void main() {
       // 2026-0004 attended today under the default (active) event.
       final defaultId = (await AttendanceService.instance.activeEvent()).id!;
 
-      final intramsId =
-          await AttendanceService.instance.createEvent('Intrams');
-      await AttendanceService.instance.setActiveEvent(intramsId);
+      final sportsFestId =
+          await AttendanceService.instance.createEvent('Sports Fest');
+      await AttendanceService.instance.setActiveEvent(sportsFestId);
       await AttendanceService.instance.recordFromScan('2026-0004');
 
-      // Second day of Intrams: switch to another event and back so 2026-0004
-      // can attend Intrams again today is not possible (unique per day/event),
-      // so instead add a second event to prove multiple events show up.
+      // A second event proves multiple events show up in the list.
       final foundationId =
           await AttendanceService.instance.createEvent('Foundation Day');
       await AttendanceService.instance.setActiveEvent(foundationId);
       await AttendanceService.instance.recordFromScan('2026-0004');
 
       final events = await AttendanceService.instance.studentEvents('2026-0004');
-      // 2026-0004: 3 seeded default-event days + Intrams today + Foundation
-      // Day today.
-      expect(events.length, 3);
+      // 2026-0004: 3 seeded default-event days + 2 seeded demo Intrams days
+      // + Sports Fest today + Foundation Day today.
+      expect(events.length, 4);
       final byName = {for (final e in events) e.event.name: e.timesAttended};
       expect(byName[DatabaseService.defaultEventName], 3);
-      expect(byName['Intrams'], 1);
+      expect(byName['Intrams'], 2); // seeded demo event, 2 days of checks
+      expect(byName['Sports Fest'], 1);
       expect(byName['Foundation Day'], 1);
 
       // Active event comes first in the list.

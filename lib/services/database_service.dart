@@ -302,6 +302,41 @@ class DatabaseService {
         });
       }
     });
+
+    // Demo Time In/Out event so the AM/PM flow is visible right away on
+    // fresh installs. Two students with a full AM/PM in/out day today and
+    // yesterday, tagged to a non-active "Intrams" event.
+    final intramsId = await _insertEvent(
+      db,
+      name: 'Intrams',
+      isActive: false,
+      flowType: EventFlowType.timeInOut,
+    );
+    const intramsStudents = ['2026-0002', '2026-0004'];
+    const intramsCheckTimes = {
+      CheckType.amIn: 8,
+      CheckType.amOut: 12,
+      CheckType.pmIn: 13,
+      CheckType.pmOut: 17,
+    };
+    for (final offset in [0, 1]) {
+      final day = DateTime(now.year, now.month, now.day)
+          .subtract(Duration(days: offset));
+      for (var i = 0; i < intramsStudents.length; i++) {
+        intramsCheckTimes.forEach((checkType, hour) {
+          db.insert(kAttendanceTable, {
+            'student_id': intramsStudents[i],
+            'date': Formatters.dbDate(day),
+            'time': '${hour.toString().padLeft(2, '0')}:'
+                '${(i * 5).toString().padLeft(2, '0')}',
+            'status': AttendanceStatus.present,
+            'check_type': checkType,
+            'event_id': intramsId,
+            'created_at': day.toIso8601String(),
+          });
+        });
+      }
+    }
   }
 
   /// Returns a random salt + SHA-256 hash of salt+password.

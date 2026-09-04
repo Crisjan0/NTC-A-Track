@@ -25,17 +25,25 @@ class AttendanceResult {
 }
 
 /// Aggregated stats shown on the admin dashboard.
+///
+/// [presentToday] / [absentToday] are scoped to the *active event* so the
+/// dashboard agrees with what the admin is actually scanning for (e.g.
+/// Intrams), instead of mixing in records from other events.
 class DashboardStats {
   final int totalStudents;
   final int presentToday;
   final int absentToday;
   final int totalAttendance;
 
+  /// Name of the event the today counts refer to.
+  final String? eventName;
+
   const DashboardStats({
     required this.totalStudents,
     required this.presentToday,
     required this.absentToday,
     required this.totalAttendance,
+    this.eventName,
   });
 }
 
@@ -51,6 +59,18 @@ class StudentSummary {
     required this.present,
     required this.absent,
     required this.rate,
+  });
+}
+
+/// One event a student has attendance records for, with how many times
+/// they attended it.
+class StudentEventSummary {
+  final AttendanceEvent event;
+  final int timesAttended;
+
+  const StudentEventSummary({
+    required this.event,
+    required this.timesAttended,
   });
 }
 
@@ -136,13 +156,15 @@ class AttendanceService {
 
   Future<DashboardStats> dashboardStats() async {
     final totalStudents = await _db.countStudents();
-    final presentToday =
-        await _db.countAttendanceOn(Formatters.dbDate(DateTime.now()));
+    final event = await _db.ensureActiveEvent();
+    final today = Formatters.dbDate(DateTime.now());
+    final presentToday = await _db.countAttendanceOn(today, eventId: event.id);
     return DashboardStats(
       totalStudents: totalStudents,
       presentToday: presentToday,
       absentToday: (totalStudents - presentToday).clamp(0, totalStudents),
       totalAttendance: await _db.countAttendance(),
+      eventName: event.name,
     );
   }
 
@@ -193,6 +215,37 @@ class AttendanceService {
       }
     }
     return history;
+  }
+
+  /// The events a student has attended (has PRESENT records for), newest
+  /// created first, each with the number of times attended.
+  Future<List<StudentEventSummary>> studentEvents(String studentId) async {
+    final records = await _db.attendanceForStudent(studentId);
+    final events = await _db.getAllEvents();
+    final byId = {for (final e in events) if (e.id != null) e.id!: e};
+
+    final counts = <int, int>{};
+    for (final r in records) {
+      final id = r.eventId;
+      if (id == null) continue;
+      counts[id] = (counts[id] ?? 0) + 1;
+    }
+
+    final result = <StudentEventSummary>[
+      for (final entry in counts.entries)
+        if (byId[entry.key] != null)
+          StudentEventSummary(
+            event: byId[entry.key]!,
+            timesAttended: entry.value,
+          ),
+    ];
+    result.sort((a, b) {
+      final active = (b.event.isActive ? 1 : 0) - (a.event.isActive ? 1 : 0);
+      return active != 0
+          ? active
+          : b.timesAttended.compareTo(a.timesAttended);
+    });
+    return result;
   }
 
   Future<StudentSummary> studentSummary(String studentId) async {

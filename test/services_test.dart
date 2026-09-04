@@ -289,5 +289,59 @@ void main() {
       expect(counts[kCourses[1]], 1); // 2026-0005 is BSCS
       expect(counts.length, 2);
     });
+
+    test('dashboard present today follows the active event', () async {
+      // Active event is the default General Attendance right now, which has 3
+      // seeded records today → 3 present.
+      final before = await AttendanceService.instance.dashboardStats();
+      expect(before.presentToday, 3);
+      expect(before.absentToday, 2);
+      expect(before.eventName, DatabaseService.defaultEventName);
+
+      // Switch to Intrams and scan one student. The seeded General
+      // Attendance records must NOT inflate Intrams' dashboard counts.
+      final intramsId =
+          await AttendanceService.instance.createEvent('Intrams');
+      await AttendanceService.instance.setActiveEvent(intramsId);
+      await AttendanceService.instance.recordFromScan('2026-0004');
+
+      final stats = await AttendanceService.instance.dashboardStats();
+      expect(stats.eventName, 'Intrams');
+      expect(stats.presentToday, 1);
+      expect(stats.absentToday, 4);
+      expect(stats.totalAttendance, greaterThan(5));
+    });
+
+    test('student events list the events a student attended with counts', () async {
+      // 2026-0004 attended today under the default (active) event.
+      final defaultId = (await AttendanceService.instance.activeEvent()).id!;
+
+      final intramsId =
+          await AttendanceService.instance.createEvent('Intrams');
+      await AttendanceService.instance.setActiveEvent(intramsId);
+      await AttendanceService.instance.recordFromScan('2026-0004');
+
+      // Second day of Intrams: switch to another event and back so 2026-0004
+      // can attend Intrams again today is not possible (unique per day/event),
+      // so instead add a second event to prove multiple events show up.
+      final foundationId =
+          await AttendanceService.instance.createEvent('Foundation Day');
+      await AttendanceService.instance.setActiveEvent(foundationId);
+      await AttendanceService.instance.recordFromScan('2026-0004');
+
+      final events = await AttendanceService.instance.studentEvents('2026-0004');
+      // 2026-0004: 3 seeded default-event days + Intrams today + Foundation
+      // Day today.
+      expect(events.length, 3);
+      final byName = {for (final e in events) e.event.name: e.timesAttended};
+      expect(byName[DatabaseService.defaultEventName], 3);
+      expect(byName['Intrams'], 1);
+      expect(byName['Foundation Day'], 1);
+
+      // Active event comes first in the list.
+      expect(events.first.event.name, 'Foundation Day');
+      expect(events.first.event.id, foundationId);
+      expect(defaultId, isNot(foundationId));
+    });
   });
 }

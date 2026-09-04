@@ -23,9 +23,10 @@ class QrScannerScreen extends StatefulWidget {
 }
 
 class _QrScannerScreenState extends State<QrScannerScreen> {
+  // No `formats` restriction on purpose: on some devices restricting to
+  // QR codes stops detection entirely.
   final MobileScannerController _controller = MobileScannerController(
     detectionSpeed: DetectionSpeed.noDuplicates,
-    formats: const [BarcodeFormat.qrCode],
   );
 
   bool _handling = false;
@@ -59,12 +60,18 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
 
     _handling = true;
     await _controller.stop();
-
-    final result = await AttendanceService.instance.recordFromScan(raw);
-    if (!mounted) return;
-    await _showResultDialog(result);
-    _handling = false;
-    await _controller.start();
+    try {
+      final result = await AttendanceService.instance.recordFromScan(raw);
+      if (!mounted) return;
+      await _showResultDialog(result);
+    } finally {
+      // Always resume the camera and clear the guard, even if recording
+      // failed, so the scanner can never get stuck after one scan.
+      if (mounted) {
+        _handling = false;
+        await _controller.start();
+      }
+    }
   }
 
   Future<void> _showResultDialog(AttendanceResult result) async {
@@ -76,6 +83,27 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
         onClose: () => Navigator.of(ctx).pop(),
       ),
     );
+  }
+
+  /// Fallback when the camera cannot read the QR: type the student ID
+  /// instead. Goes through the exact same recording flow as a scan.
+  Future<void> _manualEntry() async {
+    if (_handling) return;
+    _handling = true;
+    await _controller.stop();
+    if (!mounted) return;
+    try {
+      final id = await _promptStudentId(context);
+      if (id == null || id.trim().isEmpty) return;
+      final result = await AttendanceService.instance.recordFromScan(id);
+      if (!mounted) return;
+      await _showResultDialog(result);
+    } finally {
+      if (mounted) {
+        _handling = false;
+        await _controller.start();
+      }
+    }
   }
 
   @override
@@ -90,29 +118,30 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          LayoutBuilder(
-            builder: (context, constraints) {
+          MobileScanner(
+            controller: _controller,
+            onDetect: _onDetect,
+            // NOTE: no `scanWindow` on purpose — on many devices the
+            // restricted region does not line up with the preview, so codes
+            // get ignored. Detection runs across the whole camera view and
+            // the overlay frame below is purely a visual guide, drawn from
+            // the widget's own constraints so it is always centered.
+            errorBuilder: (context, error) => _CameraErrorView(
+              error: error,
+              onRetry: () async {
+                setState(() {});
+                await _controller.start();
+              },
+            ),
+            overlayBuilder: (context, constraints) {
               final size = constraints.biggest;
               final scanSize = size.width * 0.68;
               final scanWindow = Rect.fromCenter(
-                center: Offset(size.width / 2, size.height * 0.40),
+                center: Offset(size.width / 2, size.height * 0.45),
                 width: scanSize,
                 height: scanSize,
               );
-              return MobileScanner(
-                controller: _controller,
-                onDetect: _onDetect,
-                scanWindow: scanWindow,
-                errorBuilder: (context, error) => _CameraErrorView(
-                  error: error,
-                  onRetry: () async {
-                    setState(() {});
-                    await _controller.start();
-                  },
-                ),
-                overlayBuilder: (context, constraints) =>
-                    _ScanOverlay(scanWindow: scanWindow),
-              );
+              return _ScanOverlay(scanWindow: scanWindow);
             },
           ),
           // Top bar.
@@ -136,15 +165,27 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    const Text(
-                      'Scan Student QR Code',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
+                    const Expanded(
+                      child: Text(
+                        'Scan Student QR Code',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
-                    const Spacer(),
+                    IconButton(
+                      onPressed: _manualEntry,
+                      tooltip: 'Enter Student ID manually',
+                      icon: const Icon(
+                        Icons.keyboard_alt_outlined,
+                        color: Colors.white,
+                      ),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.black.withValues(alpha: 0.4),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -238,6 +279,42 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       ),
     );
   }
+}
+
+/// Dialog asking the admin to type a student ID (fallback when the camera
+/// cannot scan). Returns the trimmed ID, or null if cancelled.
+Future<String?> _promptStudentId(BuildContext context) {
+  final controller = TextEditingController();
+  return showDialog<String>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Enter Student ID'),
+      content: TextField(
+        controller: controller,
+        autofocus: true,
+        keyboardType: TextInputType.number,
+        decoration: const InputDecoration(
+          hintText: 'e.g. 2026-0001',
+          prefixIcon: Icon(Icons.badge_rounded),
+        ),
+        onSubmitted: (value) => Navigator.of(ctx).pop(value),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(ctx).pop(controller.text),
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Record'),
+        ),
+      ],
+    ),
+  );
 }
 
 /// Semi-transparent mask + corner brackets around the scan window.
@@ -728,6 +805,22 @@ class _QrScanLandingPageState extends State<QrScanLandingPage> {
     await _loadEvent();
   }
 
+  /// Fallback when the camera cannot read the QR: type the student ID.
+  Future<void> _manualEntry() async {
+    final id = await _promptStudentId(context);
+    if (id == null || id.trim().isEmpty) return;
+    final result = await AttendanceService.instance.recordFromScan(id);
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _ScanResultDialog(
+        result: result,
+        onClose: () => Navigator.of(ctx).pop(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -807,6 +900,15 @@ class _QrScanLandingPageState extends State<QrScanLandingPage> {
                             MaterialPageRoute(
                               builder: (_) => const QrScannerScreen(),
                             ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextButton.icon(
+                          onPressed: _manualEntry,
+                          icon: const Icon(Icons.keyboard_alt_outlined),
+                          label: const Text('Enter ID Manually'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.textSecondary,
                           ),
                         ),
                       ],

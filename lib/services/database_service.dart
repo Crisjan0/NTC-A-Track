@@ -353,11 +353,15 @@ class DatabaseService {
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
-  Future<int> countAttendanceOn(String date) async {
+  /// Records on [date], optionally scoped to a single [eventId]. Scoping to
+  /// the active event is what makes "Present Today" agree with the event the
+  /// admin is actually scanning for.
+  Future<int> countAttendanceOn(String date, {int? eventId}) async {
     final db = await database;
     final result = await db.rawQuery(
-      'SELECT COUNT(*) AS c FROM $kAttendanceTable WHERE date = ?',
-      [date],
+      'SELECT COUNT(*) AS c FROM $kAttendanceTable '
+      'WHERE date = ?${eventId == null ? '' : ' AND event_id = ?'}',
+      [date, ?eventId],
     );
     return Sqflite.firstIntValue(result) ?? 0;
   }

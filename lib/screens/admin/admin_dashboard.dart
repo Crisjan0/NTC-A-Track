@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../models/attendance_model.dart';
-import '../../models/event_model.dart';
 import '../../services/attendance_service.dart';
 import '../../services/session_service.dart';
 import '../../utils/constants.dart';
@@ -31,7 +30,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   int _absentToday = 0;
   int _totalAttendance = 0;
   List<Attendance> _recent = [];
-  AttendanceEvent? _activeEvent;
+  String? _activeEventName;
 
   @override
   void initState() {
@@ -44,7 +43,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final stats = await AttendanceService.instance.dashboardStats();
     final recent =
         await AttendanceService.instance.recentAttendance(limit: 6);
-    final activeEvent = await AttendanceService.instance.activeEvent();
     if (!mounted) return;
     setState(() {
       _totalStudents = stats.totalStudents;
@@ -52,7 +50,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       _absentToday = stats.absentToday;
       _totalAttendance = stats.totalAttendance;
       _recent = recent;
-      _activeEvent = activeEvent;
+      _activeEventName = stats.eventName;
       _loading = false;
     });
   }
@@ -205,7 +203,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     const SectionTitle(title: 'Active Event'),
                     const SizedBox(height: 12),
                     _ActiveEventBanner(
-                      event: _activeEvent,
+                      eventName: _activeEventName,
                       onManage: _openEvents,
                     ),
                     const SizedBox(height: 24),
@@ -247,10 +245,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
 /// Banner showing which event attendance is currently being recorded to.
 class _ActiveEventBanner extends StatelessWidget {
-  final AttendanceEvent? event;
+  final String? eventName;
   final VoidCallback onManage;
 
-  const _ActiveEventBanner({required this.event, required this.onManage});
+  const _ActiveEventBanner({required this.eventName, required this.onManage});
 
   @override
   Widget build(BuildContext context) {
@@ -298,7 +296,7 @@ class _ActiveEventBanner extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  event?.name ?? 'General Attendance',
+                  eventName ?? 'General Attendance',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,

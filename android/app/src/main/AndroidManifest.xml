@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Camera permission required by mobile_scanner for QR code scanning -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="true" />
     <application
-        android:label="attendancesystem"
+        android:label="Attendance System"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

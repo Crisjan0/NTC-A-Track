@@ -1,14 +1,22 @@
+import '../utils/constants.dart';
+
 /// Represents a single attendance record.
 ///
-/// The database enforces one record per student per day per event
-/// (UNIQUE constraint on student_id + date + event_id) to prevent
-/// duplicates while allowing a student to attend several events in a day.
+/// The database enforces one record per student per day per event per
+/// [checkType] (UNIQUE constraint on student_id + date + event_id +
+/// check_type) to prevent duplicates while allowing a student to attend
+/// several events in a day and to scan Time In / Time Out for events with
+/// the AM/PM flow.
 class Attendance {
   final int? id;
   final String studentId;
   final DateTime date;
   final DateTime time;
   final String status;
+
+  /// What this record is: [CheckType.present] for one-time events, or one
+  /// of the AM/PM Time In / Time Out combinations for in/out events.
+  final String checkType;
   final int? eventId;
   final DateTime createdAt;
 
@@ -26,6 +34,7 @@ class Attendance {
     required this.date,
     required this.time,
     required this.status,
+    this.checkType = CheckType.present,
     this.eventId,
     required this.createdAt,
     this.studentName,
@@ -44,6 +53,7 @@ class Attendance {
       date: date,
       time: DateTime(date.year, date.month, date.day, timeParts[0], timeParts[1]),
       status: map['status'] as String? ?? 'PRESENT',
+      checkType: map['check_type'] as String? ?? CheckType.present,
       eventId: map['event_id'] as int?,
       createdAt: DateTime.parse(map['created_at'] as String),
       studentName: map['full_name'] as String?,
@@ -60,6 +70,7 @@ class Attendance {
         'time':
             '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
         'status': status,
+        'check_type': checkType,
         if (eventId != null) 'event_id': eventId,
         'created_at': createdAt.toIso8601String(),
       };

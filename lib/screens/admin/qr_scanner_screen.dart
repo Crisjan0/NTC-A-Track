@@ -33,6 +33,12 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
   bool _torchOn = false;
   AttendanceEvent? _activeEvent;
 
+  // Time In/Out event state: which AM/PM session + in/out check to record.
+  String _session = 'AM';
+  bool _isIn = true;
+
+  String get _checkType => '${_session}_${_isIn ? 'IN' : 'OUT'}';
+
   @override
   void initState() {
     super.initState();
@@ -61,7 +67,10 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     _handling = true;
     await _controller.stop();
     try {
-      final result = await AttendanceService.instance.recordFromScan(raw);
+      final result = await AttendanceService.instance.recordFromScan(
+        raw,
+        checkType: _checkType,
+      );
       if (!mounted) return;
       await _showResultDialog(result);
     } finally {
@@ -95,7 +104,10 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     try {
       final id = await _promptStudentId(context);
       if (id == null || id.trim().isEmpty) return;
-      final result = await AttendanceService.instance.recordFromScan(id);
+      final result = await AttendanceService.instance.recordFromScan(
+        id,
+        checkType: _checkType,
+      );
       if (!mounted) return;
       await _showResultDialog(result);
     } finally {
@@ -191,6 +203,29 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
               ),
             ),
           ),
+          // Session + check type toggles (only for Time In/Out events).
+          if (_activeEvent?.usesTimeInOut ?? false)
+            Positioned(
+              top: MediaQuery.paddingOf(context).top + 66,
+              left: 0,
+              right: 0,
+              child: Column(
+                children: [
+                  _ToggleRow(
+                    options: const ['AM', 'PM'],
+                    selected: _session,
+                    onSelect: (value) => setState(() => _session = value),
+                  ),
+                  const SizedBox(height: 8),
+                  _ToggleRow(
+                    options: const ['Time In', 'Time Out'],
+                    selected: _isIn ? 'Time In' : 'Time Out',
+                    onSelect: (value) =>
+                        setState(() => _isIn = value == 'Time In'),
+                  ),
+                ],
+              ),
+            ),
           // Active event pill + hint text above the scan frame.
           Positioned(
             left: 24,
@@ -422,6 +457,58 @@ class _ControlButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Pill toggle used for the AM/PM and Time In/Time Out selectors.
+class _ToggleRow extends StatelessWidget {
+  final List<String> options;
+  final String selected;
+  final ValueChanged<String> onSelect;
+
+  const _ToggleRow({
+    required this.options,
+    required this.selected,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (final option in options)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Material(
+              color: option == selected
+                  ? AppColors.primary
+                  : Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(999),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(999),
+                onTap: () => onSelect(option),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 9,
+                  ),
+                  child: Text(
+                    option,
+                    style: TextStyle(
+                      color: option == selected
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.85),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -693,9 +780,18 @@ class _StudentSummary extends StatelessWidget {
               label: 'Time',
               value: Formatters.time(record!.time),
             ),
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: _PresentBadge(),
+            if (record!.checkType != CheckType.present)
+              _SummaryRow(
+                label: 'Check',
+                value: CheckType.label(record!.checkType),
+              ),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: _PresentBadge(
+                label: record!.checkType == CheckType.present
+                    ? null
+                    : CheckType.label(record!.checkType),
+              ),
             ),
           ],
         ],
@@ -744,7 +840,10 @@ class _SummaryRow extends StatelessWidget {
 }
 
 class _PresentBadge extends StatelessWidget {
-  const _PresentBadge();
+  /// Custom label (e.g. "AM Time In"); defaults to "STATUS: PRESENT".
+  final String? label;
+
+  const _PresentBadge({this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -754,14 +853,18 @@ class _PresentBadge extends StatelessWidget {
         color: AppColors.successLight,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: const Row(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.check_circle_rounded, size: 15, color: AppColors.success),
-          SizedBox(width: 5),
+          const Icon(
+            Icons.check_circle_rounded,
+            size: 15,
+            color: AppColors.success,
+          ),
+          const SizedBox(width: 5),
           Text(
-            'STATUS: PRESENT',
-            style: TextStyle(
+            label?.toUpperCase() ?? 'STATUS: PRESENT',
+            style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.8,
@@ -881,10 +984,16 @@ class _QrScanLandingPageState extends State<QrScanLandingPage> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const Text(
-                          'Point the camera at a student\'s QR code to record '
-                          'their attendance for today. Each student can only '
-                          'be marked present once per day.',
+                        Text(
+                          _activeEvent?.usesTimeInOut ?? false
+                              ? 'Point the camera at a student\'s QR code to '
+                                  'record their Time In or Time Out. Pick the '
+                                  'session (AM/PM) and check type before '
+                                  'scanning.'
+                              : 'Point the camera at a student\'s QR code to '
+                                  'record their attendance for today. Each '
+                                  'student can only be marked present once '
+                                  'per day.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 13,

@@ -83,12 +83,16 @@ class AttendanceService {
   final DatabaseService _db = DatabaseService.instance;
 
   /// Core scan flow: resolve student, check today's record for the active
-  /// event, insert if new.
+  /// event + check type, insert if new.
   ///
-  /// Returns the outcome so the UI can show the right confirmation. The
-  /// active event is used automatically (creating a default one if none
-  /// exists), so "one event at a time" scanning just works.
-  Future<AttendanceResult> recordFromScan(String rawQrValue) async {
+  /// [checkType] selects what is being recorded: for one-time events it is
+  /// ignored (always [CheckType.present]); for Time In/Out events it must be
+  /// one of the AM/PM check-in/check-out combinations (defaults to
+  /// [CheckType.amIn]).
+  Future<AttendanceResult> recordFromScan(
+    String rawQrValue, {
+    String? checkType,
+  }) async {
     final studentId = rawQrValue.trim();
     if (studentId.isEmpty) {
       return const AttendanceResult(type: AttendanceResultType.studentNotFound);
@@ -102,8 +106,11 @@ class AttendanceService {
     final event = await _db.ensureActiveEvent();
     final now = DateTime.now();
     final date = Formatters.dbDate(now);
+    final effectiveCheck =
+        event.usesTimeInOut ? (checkType ?? CheckType.amIn) : CheckType.present;
 
-    final existing = await _db.findAttendance(studentId, date, event.id!);
+    final existing =
+        await _db.findAttendance(studentId, date, event.id!, effectiveCheck);
     if (existing != null) {
       return AttendanceResult(
         type: AttendanceResultType.alreadyRecorded,
@@ -118,6 +125,7 @@ class AttendanceService {
       date: now,
       time: now,
       status: AttendanceStatus.present,
+      checkType: effectiveCheck,
       eventId: event.id,
       createdAt: now,
     );
@@ -146,8 +154,14 @@ class AttendanceService {
   Future<Map<String, int>> courseCountsForEvent(int eventId) =>
       _db.courseCountsForEvent(eventId);
 
-  Future<int> createEvent(String name, {bool setActive = false}) =>
-      _db.insertEvent(name, setActive: setActive);
+  Future<int> createEvent(
+    String name, {
+    bool setActive = false,
+    String flowType = EventFlowType.oneTime,
+  }) =>
+      _db.insertEvent(name, setActive: setActive, flowType: flowType);
+
+  Future<void> updateEvent(AttendanceEvent event) => _db.updateEvent(event);
 
   Future<void> setActiveEvent(int id) => _db.setActiveEvent(id);
 
@@ -225,10 +239,16 @@ class AttendanceService {
     final byId = {for (final e in events) if (e.id != null) e.id!: e};
 
     final counts = <int, int>{};
+    final seenDays = <String>{};
     for (final r in records) {
       final id = r.eventId;
       if (id == null) continue;
-      counts[id] = (counts[id] ?? 0) + 1;
+      // One day = one attendance, even for Time In/Out events where a
+      // student produces several records (AM/PM in/out) per day.
+      final dayKey = '${r.date.toIso8601String().substring(0, 10)}#$id';
+      if (seenDays.add(dayKey)) {
+        counts[id] = (counts[id] ?? 0) + 1;
+      }
     }
 
     final result = <StudentEventSummary>[

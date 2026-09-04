@@ -94,6 +94,41 @@ class AttendanceStatus {
   static const String absent = 'ABSENT';
 }
 
+/// Attendance flow options for an event.
+class EventFlowType {
+  EventFlowType._();
+
+  /// One scan per student per day marks attendance (default).
+  static const String oneTime = 'ONE_TIME';
+
+  /// AM + PM sessions, each with a Time In and a Time Out scan.
+  static const String timeInOut = 'TIME_IN_OUT';
+}
+
+/// What a single attendance record represents. For [EventFlowType.oneTime]
+/// events every record is [present]; for [EventFlowType.timeInOut] events
+/// records are one of the four AM/PM check-in/check-out combinations.
+class CheckType {
+  CheckType._();
+
+  static const String present = 'PRESENT';
+  static const String amIn = 'AM_IN';
+  static const String amOut = 'AM_OUT';
+  static const String pmIn = 'PM_IN';
+  static const String pmOut = 'PM_OUT';
+
+  static const List<String> all = [present, amIn, amOut, pmIn, pmOut];
+
+  /// "AM Time In" / "PM Time Out" style labels.
+  static String label(String checkType) => switch (checkType) {
+        amIn => 'AM Time In',
+        amOut => 'AM Time Out',
+        pmIn => 'PM Time In',
+        pmOut => 'PM Time Out',
+        _ => 'Present',
+      };
+}
+
 /// Default demo credentials (seeded on first run).
 class DemoCredentials {
   DemoCredentials._();

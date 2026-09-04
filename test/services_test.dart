@@ -1,3 +1,4 @@
+import 'package:attendancesystem/models/event_model.dart';
 import 'package:attendancesystem/services/attendance_service.dart';
 import 'package:attendancesystem/services/auth_service.dart';
 import 'package:attendancesystem/services/database_service.dart';
@@ -342,6 +343,125 @@ void main() {
       expect(events.first.event.name, 'Foundation Day');
       expect(events.first.event.id, foundationId);
       expect(defaultId, isNot(foundationId));
+    });
+  });
+
+  group('Attendance flow types', () {
+    test('events default to one-time flow', () async {
+      final active = await AttendanceService.instance.activeEvent();
+      expect(active.flowType, EventFlowType.oneTime);
+      expect(active.usesTimeInOut, isFalse);
+    });
+
+    test('time-in/out event records AM/PM in and out scans per day', () async {
+      final id = await AttendanceService.instance.createEvent(
+        'Intrams',
+        flowType: EventFlowType.timeInOut,
+      );
+      await AttendanceService.instance.setActiveEvent(id);
+      final event =
+          (await AttendanceService.instance.allEvents()).firstWhere(
+        (e) => e.id == id,
+      );
+      expect(event.usesTimeInOut, isTrue);
+
+      Future<AttendanceResult> scan(String check) =>
+          AttendanceService.instance.recordFromScan(
+            '2026-0004',
+            checkType: check,
+          );
+
+      // Each check type records once per day.
+      final amIn = await scan(CheckType.amIn);
+      expect(amIn.type, AttendanceResultType.success);
+      expect(amIn.attendance!.checkType, CheckType.amIn);
+
+      // Duplicate of the same check is blocked.
+      final dup = await scan(CheckType.amIn);
+      expect(dup.type, AttendanceResultType.alreadyRecorded);
+
+      expect((await scan(CheckType.amOut)).type, AttendanceResultType.success);
+      expect((await scan(CheckType.pmIn)).type, AttendanceResultType.success);
+      expect((await scan(CheckType.pmOut)).type, AttendanceResultType.success);
+
+      final records =
+          await AttendanceService.instance.queryAttendance(eventId: id);
+      expect(records, hasLength(4));
+      expect(
+        records.map((r) => r.checkType).toSet(),
+        {CheckType.amIn, CheckType.amOut, CheckType.pmIn, CheckType.pmOut},
+      );
+    });
+
+    test('present today counts distinct students for in/out events', () async {
+      final id = await AttendanceService.instance.createEvent(
+        'Intrams',
+        flowType: EventFlowType.timeInOut,
+      );
+      await AttendanceService.instance.setActiveEvent(id);
+      for (final check in [
+        CheckType.amIn,
+        CheckType.amOut,
+        CheckType.pmIn,
+        CheckType.pmOut,
+      ]) {
+        await AttendanceService.instance
+            .recordFromScan('2026-0004', checkType: check);
+      }
+      await AttendanceService.instance
+          .recordFromScan('2026-0005', checkType: CheckType.amIn);
+
+      final stats = await AttendanceService.instance.dashboardStats();
+      expect(stats.eventName, 'Intrams');
+      expect(stats.presentToday, 2);
+      expect(stats.absentToday, 3);
+    });
+
+    test('student events count a time-in/out day once', () async {
+      final id = await AttendanceService.instance.createEvent(
+        'Intrams',
+        flowType: EventFlowType.timeInOut,
+      );
+      await AttendanceService.instance.setActiveEvent(id);
+      for (final check in [
+        CheckType.amIn,
+        CheckType.amOut,
+        CheckType.pmIn,
+        CheckType.pmOut,
+      ]) {
+        await AttendanceService.instance
+            .recordFromScan('2026-0004', checkType: check);
+      }
+
+      final events =
+          await AttendanceService.instance.studentEvents('2026-0004');
+      final intrams = events.firstWhere((e) => e.event.id == id);
+      expect(intrams.timesAttended, 1);
+    });
+
+    test('event flow type can be edited', () async {
+      final id = await AttendanceService.instance.createEvent('Intrams');
+      final event =
+          (await AttendanceService.instance.allEvents()).firstWhere(
+        (e) => e.id == id,
+      );
+      expect(event.flowType, EventFlowType.oneTime);
+
+      await AttendanceService.instance.updateEvent(AttendanceEvent(
+        id: id,
+        name: 'Intrams 2026',
+        isActive: event.isActive,
+        flowType: EventFlowType.timeInOut,
+        createdAt: event.createdAt,
+      ));
+
+      final updated =
+          (await AttendanceService.instance.allEvents()).firstWhere(
+        (e) => e.id == id,
+      );
+      expect(updated.name, 'Intrams 2026');
+      expect(updated.flowType, EventFlowType.timeInOut);
+      expect(updated.usesTimeInOut, isTrue);
     });
   });
 }

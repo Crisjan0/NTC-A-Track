@@ -1,24 +1,37 @@
+import '../utils/constants.dart';
+
 /// Represents an attendance event (e.g. "Intrams", "Foundation Day").
 ///
 /// Exactly one event is *active* at a time; QR scans are recorded to the
 /// active event. Attendance rows reference the event they were scanned for.
+///
+/// Each event also has an attendance [flowType]:
+///  - [EventFlowType.oneTime]: one scan per student per day (default)
+///  - [EventFlowType.timeInOut]: AM + PM sessions, each with a Time In and
+///    a Time Out scan
 class AttendanceEvent {
   final int? id;
   final String name;
   final bool isActive;
+  final String flowType;
   final DateTime createdAt;
 
   const AttendanceEvent({
     this.id,
     required this.name,
     required this.isActive,
+    this.flowType = EventFlowType.oneTime,
     required this.createdAt,
   });
+
+  /// Whether this event uses AM/PM Time In + Time Out scanning.
+  bool get usesTimeInOut => flowType == EventFlowType.timeInOut;
 
   factory AttendanceEvent.fromMap(Map<String, dynamic> map) => AttendanceEvent(
         id: map['id'] as int?,
         name: map['name'] as String,
         isActive: (map['is_active'] as int?) == 1,
+        flowType: map['flow_type'] as String? ?? EventFlowType.oneTime,
         createdAt: DateTime.parse(map['created_at'] as String),
       );
 
@@ -26,6 +39,7 @@ class AttendanceEvent {
         if (id != null) 'id': id,
         'name': name,
         'is_active': isActive ? 1 : 0,
+        'flow_type': flowType,
         'created_at': createdAt.toIso8601String(),
       };
 }

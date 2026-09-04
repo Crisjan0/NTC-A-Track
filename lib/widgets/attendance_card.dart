@@ -141,7 +141,9 @@ class AttendanceCard extends StatelessWidget {
               ],
             ),
           ),
-          StatusChip(status: record.status),
+          record.checkType == CheckType.present
+              ? StatusChip(status: record.status)
+              : _CheckChip(checkType: record.checkType),
         ],
       ),
     );
@@ -153,5 +155,44 @@ class AttendanceCard extends StatelessWidget {
       'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
     ];
     return months[d.month - 1];
+  }
+}
+
+/// Pill showing what a Time In/Out record is (e.g. "AM TIME IN").
+class _CheckChip extends StatelessWidget {
+  final String checkType;
+
+  const _CheckChip({required this.checkType});
+
+  @override
+  Widget build(BuildContext context) {
+    final isIn = checkType.endsWith('_IN');
+    final color = isIn ? AppColors.info : AppColors.warning;
+    final bg = isIn ? AppColors.infoLight : AppColors.warningLight;
+    final icon = isIn ? Icons.login_rounded : Icons.logout_rounded;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 4),
+          Text(
+            CheckType.label(checkType).toUpperCase(),
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.4,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -42,47 +42,41 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
   }
 
   Future<void> _addEvent() async {
-    final name = await _promptForName();
-    if (name == null || name.trim().isEmpty) return;
+    final draft = await showDialog<_EventDraft>(
+      context: context,
+      builder: (_) => const _EventDialog(title: 'New Event'),
+    );
+    if (draft == null || draft.name.trim().isEmpty) return;
 
     // If no event is active yet, activate the first one right away so
     // scanning keeps working.
     final hasActive = _events.any((e) => e.isActive);
-    await _service.createEvent(name, setActive: !hasActive);
+    await _service.createEvent(
+      draft.name,
+      setActive: !hasActive,
+      flowType: draft.flowType,
+    );
     await _load();
   }
 
-  Future<String?> _promptForName() {
-    final controller = TextEditingController();
-    return showDialog<String>(
+  Future<void> _editEvent(AttendanceEvent event) async {
+    final draft = await showDialog<_EventDraft>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('New Event'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(
-            hintText: 'e.g. Intrams',
-            prefixIcon: Icon(Icons.event_rounded),
-          ),
-          onSubmitted: (value) => Navigator.of(ctx).pop(value),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primary,
-            ),
-            child: const Text('Create'),
-          ),
-        ],
+      builder: (_) => _EventDialog(
+        title: 'Edit Event',
+        initialName: event.name,
+        initialFlowType: event.flowType,
       ),
     );
+    if (draft == null || draft.name.trim().isEmpty) return;
+    await _service.updateEvent(AttendanceEvent(
+      id: event.id,
+      name: draft.name,
+      isActive: event.isActive,
+      flowType: draft.flowType,
+      createdAt: event.createdAt,
+    ));
+    await _load();
   }
 
   Future<void> _setActive(AttendanceEvent event) async {
@@ -201,6 +195,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                             event: _events[index],
                             recordCount: _counts[_events[index].id] ?? 0,
                             onSetActive: () => _setActive(_events[index]),
+                            onEdit: () => _editEvent(_events[index]),
                             onDelete: () => _confirmDelete(_events[index]),
                           ),
                         ),
@@ -216,12 +211,14 @@ class _EventRow extends StatelessWidget {
   final AttendanceEvent event;
   final int recordCount;
   final VoidCallback onSetActive;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   const _EventRow({
     required this.event,
     required this.recordCount,
     required this.onSetActive,
+    required this.onEdit,
     required this.onDelete,
   });
 
@@ -267,15 +264,24 @@ class _EventRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  recordCount == 0
-                      ? 'No records yet'
-                      : '$recordCount ${recordCount == 1 ? 'record' : 'records'}',
+                  '${recordCount == 0 ? 'No records yet' : '$recordCount ${recordCount == 1 ? 'student' : 'students'}'} · '
+                  '${event.usesTimeInOut ? 'AM/PM In & Out' : 'One-time'}',
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondary,
                   ),
                 ),
               ],
+            ),
+          ),
+          IconButton(
+            onPressed: onEdit,
+            tooltip: 'Edit event',
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(
+              Icons.edit_outlined,
+              size: 20,
+              color: AppColors.textSecondary,
             ),
           ),
           if (event.isActive)
@@ -330,6 +336,129 @@ class _EventRow extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// Name + attendance flow chosen in the event dialog.
+class _EventDraft {
+  final String name;
+  final String flowType;
+
+  const _EventDraft({required this.name, required this.flowType});
+}
+
+/// Dialog to create or edit an event: name + attendance flow (One-time or
+/// AM/PM Time In & Out).
+class _EventDialog extends StatefulWidget {
+  final String title;
+  final String initialName;
+  final String initialFlowType;
+
+  const _EventDialog({
+    required this.title,
+    this.initialName = '',
+    this.initialFlowType = EventFlowType.oneTime,
+  });
+
+  @override
+  State<_EventDialog> createState() => _EventDialogState();
+}
+
+class _EventDialogState extends State<_EventDialog> {
+  late final TextEditingController _nameController;
+  late String _flowType;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.initialName);
+    _flowType = widget.initialFlowType;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _nameController,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(
+              hintText: 'e.g. Intrams',
+              prefixIcon: Icon(Icons.event_rounded),
+            ),
+          ),
+          const SizedBox(height: 18),
+          const Text(
+            'Attendance Flow',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(
+                value: EventFlowType.oneTime,
+                label: Text('One-time'),
+                icon: Icon(Icons.check_circle_outline_rounded, size: 18),
+              ),
+              ButtonSegment(
+                value: EventFlowType.timeInOut,
+                label: Text('Time In/Out'),
+                icon: Icon(Icons.schedule_rounded, size: 18),
+              ),
+            ],
+            selected: {_flowType},
+            showSelectedIcon: false,
+            onSelectionChanged: (selection) {
+              setState(() => _flowType = selection.first);
+            },
+          ),
+          const SizedBox(height: 10),
+          Text(
+            _flowType == EventFlowType.timeInOut
+                ? 'AM and PM sessions — each with a Time In and Time Out.'
+                : 'One scan per student per day marks attendance.',
+            style: const TextStyle(
+              fontSize: 12,
+              height: 1.4,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(
+            _EventDraft(
+              name: _nameController.text.trim(),
+              flowType: _flowType,
+            ),
+          ),
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.primary,
+          ),
+          child: Text(widget.title == 'New Event' ? 'Create' : 'Save'),
+        ),
+      ],
     );
   }
 }

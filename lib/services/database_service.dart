@@ -60,7 +60,7 @@ class DatabaseService {
         p.join(await getDatabasesPath(), dbName);
     return openDatabase(
       path,
-      version: 2,
+      version: 3,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -71,6 +71,9 @@ class DatabaseService {
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
           await _migrateToV2(db);
+        }
+        if (oldVersion < 3) {
+          await _migrateToV3(db);
         }
       },
     );
@@ -116,13 +119,15 @@ class DatabaseService {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         is_active INTEGER NOT NULL DEFAULT 0,
+        flow_type TEXT NOT NULL DEFAULT 'ONE_TIME',
         created_at TEXT NOT NULL
       )
     ''');
   }
 
-  // One record per student per day per event → duplicates are impossible at
-  // DB level, while a student can still attend several events in one day.
+  // One record per student per day per event per check type → duplicates are
+  // impossible at DB level, while a student can still attend several events
+  // in a day and scan Time In / Time Out for AM/PM events.
   Future<void> _createAttendanceTable(Database db) async {
     await db.execute('''
       CREATE TABLE $kAttendanceTable (
@@ -131,9 +136,10 @@ class DatabaseService {
         date TEXT NOT NULL,
         time TEXT NOT NULL,
         status TEXT NOT NULL DEFAULT 'PRESENT',
+        check_type TEXT NOT NULL DEFAULT 'PRESENT',
         event_id INTEGER,
         created_at TEXT NOT NULL,
-        UNIQUE (student_id, date, event_id),
+        UNIQUE (student_id, date, event_id, check_type),
         FOREIGN KEY (student_id) REFERENCES $kStudentsTable (student_id) ON DELETE CASCADE,
         FOREIGN KEY (event_id) REFERENCES $kEventsTable (id) ON DELETE SET NULL
       )
@@ -176,6 +182,51 @@ class DatabaseService {
     await db.execute('DROP TABLE $kAttendanceTable');
     await db.execute(
       'ALTER TABLE ${kAttendanceTable}_v2 RENAME TO $kAttendanceTable',
+    );
+    await db.execute(
+      'CREATE INDEX idx_attendance_date ON $kAttendanceTable (date)',
+    );
+  }
+
+  /// v2 → v3: adds the attendance flow type to events (ONE_TIME by default)
+  /// and widens the unique constraint to one record per student per day per
+  /// event per check type, so Time In / Time Out events can store AM/PM
+  /// check-ins and check-outs.
+  Future<void> _migrateToV3(Database db) async {
+    await db.execute(
+      'ALTER TABLE $kEventsTable ADD COLUMN flow_type '
+      "TEXT NOT NULL DEFAULT 'ONE_TIME'",
+    );
+
+    // SQLite cannot alter a UNIQUE constraint, so rebuild the table.
+    await db.execute(
+      'ALTER TABLE $kAttendanceTable ADD COLUMN check_type '
+      "TEXT NOT NULL DEFAULT 'PRESENT'",
+    );
+    await db.execute('''
+      CREATE TABLE ${kAttendanceTable}_v3 (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id TEXT NOT NULL,
+        date TEXT NOT NULL,
+        time TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'PRESENT',
+        check_type TEXT NOT NULL DEFAULT 'PRESENT',
+        event_id INTEGER,
+        created_at TEXT NOT NULL,
+        UNIQUE (student_id, date, event_id, check_type),
+        FOREIGN KEY (student_id) REFERENCES $kStudentsTable (student_id) ON DELETE CASCADE,
+        FOREIGN KEY (event_id) REFERENCES $kEventsTable (id) ON DELETE SET NULL
+      )
+    ''');
+    await db.execute('''
+      INSERT INTO ${kAttendanceTable}_v3
+        (id, student_id, date, time, status, check_type, event_id, created_at)
+      SELECT id, student_id, date, time, status, 'PRESENT', event_id, created_at
+      FROM $kAttendanceTable
+    ''');
+    await db.execute('DROP TABLE $kAttendanceTable');
+    await db.execute(
+      'ALTER TABLE ${kAttendanceTable}_v3 RENAME TO $kAttendanceTable',
     );
     await db.execute(
       'CREATE INDEX idx_attendance_date ON $kAttendanceTable (date)',
@@ -245,6 +296,7 @@ class DatabaseService {
           'time': '${recordTime.hour.toString().padLeft(2, '0')}:'
               '${recordTime.minute.toString().padLeft(2, '0')}',
           'status': AttendanceStatus.present,
+          'check_type': CheckType.present,
           'event_id': defaultEventId,
           'created_at': day.toIso8601String(),
         });
@@ -353,13 +405,14 @@ class DatabaseService {
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
-  /// Records on [date], optionally scoped to a single [eventId]. Scoping to
-  /// the active event is what makes "Present Today" agree with the event the
-  /// admin is actually scanning for.
+  /// Distinct students with a record on [date], optionally scoped to a
+  /// single [eventId]. DISTINCT matters for Time In/Out events where one
+  /// student produces several records per day. Scoping to the active event
+  /// is what makes "Present Today" agree with the event being scanned for.
   Future<int> countAttendanceOn(String date, {int? eventId}) async {
     final db = await database;
     final result = await db.rawQuery(
-      'SELECT COUNT(*) AS c FROM $kAttendanceTable '
+      'SELECT COUNT(DISTINCT student_id) AS c FROM $kAttendanceTable '
       'WHERE date = ?${eventId == null ? '' : ' AND event_id = ?'}',
       [date, ?eventId],
     );
@@ -389,9 +442,32 @@ class DatabaseService {
   }
 
   /// Creates an event, optionally activating it right away.
-  Future<int> insertEvent(String name, {bool setActive = false}) async {
+  Future<int> insertEvent(
+    String name, {
+    bool setActive = false,
+    String flowType = EventFlowType.oneTime,
+  }) async {
     final db = await database;
-    return _insertEvent(db, name: name, isActive: setActive);
+    return _insertEvent(
+      db,
+      name: name,
+      isActive: setActive,
+      flowType: flowType,
+    );
+  }
+
+  /// Updates an event's name / flow type.
+  Future<void> updateEvent(AttendanceEvent event) async {
+    final db = await database;
+    await db.update(
+      kEventsTable,
+      {
+        'name': event.name.trim(),
+        'flow_type': event.flowType,
+      },
+      where: 'id = ?',
+      whereArgs: [event.id],
+    );
   }
 
   /// Makes [id] the active event (all others become inactive).
@@ -440,11 +516,13 @@ class DatabaseService {
   }
 
   /// Distinct courses that have attendance records for [eventId], with the
-  /// number of records per course (drill-down: event → course → students).
+  /// number of *distinct students* per course (drill-down: event → course →
+  /// students). DISTINCT keeps Time In/Out events from counting the same
+  /// student four times.
   Future<Map<String, int>> courseCountsForEvent(int eventId) async {
     final db = await database;
     final rows = await db.rawQuery('''
-      SELECT s.course, COUNT(*) AS c
+      SELECT s.course, COUNT(DISTINCT a.student_id) AS c
       FROM $kAttendanceTable a
       JOIN $kStudentsTable s ON s.student_id = a.student_id
       WHERE a.event_id = ?
@@ -456,11 +534,12 @@ class DatabaseService {
     };
   }
 
-  /// Attendance count per event, keyed by event id.
+  /// Distinct-student attendance count per event, keyed by event id.
   Future<Map<int, int>> attendanceCountByEvent() async {
     final db = await database;
     final rows = await db.rawQuery(
-      'SELECT event_id, COUNT(*) AS c FROM $kAttendanceTable '
+      'SELECT event_id, COUNT(DISTINCT student_id) AS c '
+      'FROM $kAttendanceTable '
       'WHERE event_id IS NOT NULL GROUP BY event_id',
     );
     return {
@@ -473,10 +552,12 @@ class DatabaseService {
     Database db, {
     required String name,
     bool isActive = false,
+    String flowType = EventFlowType.oneTime,
   }) async {
     final id = await db.insert(kEventsTable, {
       'name': name.trim(),
       'is_active': 0,
+      'flow_type': flowType,
       'created_at': DateTime.now().toIso8601String(),
     });
     if (isActive) {
@@ -497,17 +578,18 @@ class DatabaseService {
 
   // ----------------------------------------------------------- attendance
 
-  /// Existing record for a student on a given date and event, if any.
+  /// Existing record for a student on a given date, event and check type.
   Future<Attendance?> findAttendance(
     String studentId,
     String date,
     int eventId,
+    String checkType,
   ) async {
     final db = await database;
     final rows = await db.query(
       kAttendanceTable,
-      where: 'student_id = ? AND date = ? AND event_id = ?',
-      whereArgs: [studentId, date, eventId],
+      where: 'student_id = ? AND date = ? AND event_id = ? AND check_type = ?',
+      whereArgs: [studentId, date, eventId, checkType],
       limit: 1,
     );
     return rows.isEmpty ? null : Attendance.fromMap(rows.first);

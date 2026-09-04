@@ -204,20 +204,24 @@ class AttendanceService {
 
   /// A student's own history: every school day (dates that appear anywhere
   /// in attendance) marked PRESENT or ABSENT for this student.
+  ///
+  /// Days with records return *all* of them (e.g. the AM/PM Time In/Out
+  /// checks), so the UI can group them into a single day card.
   Future<List<Attendance>> studentHistory(String studentId) async {
     final records = await _db.attendanceForStudent(studentId);
-    final byDate = {
-      for (final r in records) Formatters.dbDate(r.date): r,
-    };
+    final byDate = <String, List<Attendance>>{};
+    for (final r in records) {
+      byDate.putIfAbsent(Formatters.dbDate(r.date), () => []).add(r);
+    }
 
     final schoolDays = await _db.distinctAttendanceDates();
     final history = <Attendance>[];
 
     for (final day in schoolDays) {
       final parsed = DateTime.parse(day);
-      final existing = byDate[day];
-      if (existing != null) {
-        history.add(existing);
+      final dayRecords = byDate[day];
+      if (dayRecords != null && dayRecords.isNotEmpty) {
+        history.addAll(dayRecords);
       } else {
         history.add(Attendance(
           studentId: studentId,

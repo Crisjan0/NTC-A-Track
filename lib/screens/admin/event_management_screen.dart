@@ -348,6 +348,89 @@ class _EventDraft {
   const _EventDraft({required this.name, required this.flowType});
 }
 
+/// A selectable flow-type row inside the event dialog.
+class _FlowOption extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _FlowOption({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected ? AppColors.indigoLight : AppColors.surface,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected ? AppColors.primary : AppColors.border,
+              width: selected ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                color: selected
+                    ? AppColors.primary
+                    : AppColors.textSecondary,
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                selected
+                    ? Icons.radio_button_checked_rounded
+                    : Icons.radio_button_off_rounded,
+                color:
+                    selected ? AppColors.primary : AppColors.border,
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Dialog to create or edit an event: name + attendance flow (One-time or
 /// AM/PM Time In & Out).
 class _EventDialog extends StatefulWidget {
@@ -386,6 +469,9 @@ class _EventDialogState extends State<_EventDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(widget.title),
+      // scrollable keeps the dialog from overflowing on short screens or
+      // when the keyboard is open (autofocus on the name field).
+      scrollable: true,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -409,35 +495,22 @@ class _EventDialogState extends State<_EventDialog> {
             ),
           ),
           const SizedBox(height: 8),
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(
-                value: EventFlowType.oneTime,
-                label: Text('One-time'),
-                icon: Icon(Icons.check_circle_outline_rounded, size: 18),
-              ),
-              ButtonSegment(
-                value: EventFlowType.timeInOut,
-                label: Text('Time In/Out'),
-                icon: Icon(Icons.schedule_rounded, size: 18),
-              ),
-            ],
-            selected: {_flowType},
-            showSelectedIcon: false,
-            onSelectionChanged: (selection) {
-              setState(() => _flowType = selection.first);
-            },
+          _FlowOption(
+            title: 'One-time',
+            subtitle: 'One scan per student per day',
+            icon: Icons.check_circle_outline_rounded,
+            selected: _flowType == EventFlowType.oneTime,
+            onTap: () =>
+                setState(() => _flowType = EventFlowType.oneTime),
           ),
-          const SizedBox(height: 10),
-          Text(
-            _flowType == EventFlowType.timeInOut
-                ? 'AM and PM sessions — each with a Time In and Time Out.'
-                : 'One scan per student per day marks attendance.',
-            style: const TextStyle(
-              fontSize: 12,
-              height: 1.4,
-              color: AppColors.textSecondary,
-            ),
+          const SizedBox(height: 8),
+          _FlowOption(
+            title: 'Time In/Out',
+            subtitle: 'AM & PM sessions — Time In and Time Out each',
+            icon: Icons.schedule_rounded,
+            selected: _flowType == EventFlowType.timeInOut,
+            onTap: () =>
+                setState(() => _flowType = EventFlowType.timeInOut),
           ),
         ],
       ),

@@ -439,6 +439,32 @@ void main() {
       expect(intrams.timesAttended, 1);
     });
 
+    test('student history returns all time-in/out checks for a day', () async {
+      final id = await AttendanceService.instance.createEvent(
+        'Intrams',
+        flowType: EventFlowType.timeInOut,
+      );
+      await AttendanceService.instance.setActiveEvent(id);
+      for (final check in [
+        CheckType.amIn,
+        CheckType.amOut,
+        CheckType.pmIn,
+        CheckType.pmOut,
+      ]) {
+        await AttendanceService.instance
+            .recordFromScan('2026-0004', checkType: check);
+      }
+
+      final history =
+          await AttendanceService.instance.studentHistory('2026-0004');
+      final intrams = history.where((r) => r.eventId == id).toList();
+      expect(intrams, hasLength(4));
+      expect(
+        intrams.map((r) => r.checkType).toSet(),
+        {CheckType.amIn, CheckType.amOut, CheckType.pmIn, CheckType.pmOut},
+      );
+    });
+
     test('event flow type can be edited', () async {
       final id = await AttendanceService.instance.createEvent('Intrams');
       final event =

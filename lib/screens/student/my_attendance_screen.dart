@@ -6,6 +6,7 @@ import '../../models/student_model.dart';
 import '../../services/attendance_service.dart';
 import '../../services/auth_service.dart';
 import '../../utils/constants.dart';
+import '../../utils/formatters.dart';
 import '../../widgets/attendance_card.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/gradient_header.dart';
@@ -60,9 +61,38 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
   }
 
   List<Attendance> get _visibleRecords {
-    final records = _history.where((r) => r.status != AttendanceStatus.absent);
-    if (_selectedEventId == null) return records.toList();
-    return records.where((r) => r.eventId == _selectedEventId).toList();
+    // With no event selected show everything (absent days included). When an
+    // event chip is selected, only that event's records remain (absent days
+    // belong to no event, so they drop out naturally).
+    final records =
+        _history.where((r) => _selectedEventId == null || r.eventId == _selectedEventId);
+    return records.toList();
+  }
+
+  /// Groups the visible records so Time In/Out checks for the same day +
+  /// event render as one card instead of four separate rows.
+  List<Widget> _buildHistoryRows() {
+    final groups = <String, List<Attendance>>{};
+    for (final r in _visibleRecords) {
+      final key = '${Formatters.dbDate(r.date)}#${r.eventId}';
+      groups.putIfAbsent(key, () => []).add(r);
+    }
+
+    final rows = <Widget>[];
+    for (final group in groups.values) {
+      final isAbsentDay =
+          group.every((r) => r.status == AttendanceStatus.absent);
+      final isInOutDay = group.any((r) => r.checkType != CheckType.present);
+
+      final Widget card = (isAbsentDay || (!isInOutDay && group.length == 1))
+          ? AttendanceCard(record: group.first, showStudent: false)
+          : _DayAttendanceCard(records: group);
+      rows.add(Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: card,
+      ));
+    }
+    return rows;
   }
 
   @override
@@ -100,14 +130,7 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
                               ),
                               const SizedBox(height: 16),
                             ],
-                            for (final record in _visibleRecords)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 10),
-                                child: AttendanceCard(
-                                  record: record,
-                                  showStudent: false,
-                                ),
-                              ),
+                            ..._buildHistoryRows(),
                             if (_visibleRecords.isEmpty)
                               const EmptyState(
                                 icon: Icons.event_busy_rounded,
@@ -219,4 +242,160 @@ class _EventsChips extends StatelessWidget {
   }
 
   bool _eventIsActive(AttendanceEvent event) => event.isActive;
+}
+
+/// One day card for a Time In/Out event: shows the AM/PM Time In and Time
+/// Out of the student for that day + event. Missing checks show "—".
+class _DayAttendanceCard extends StatelessWidget {
+  final List<Attendance> records;
+
+  const _DayAttendanceCard({required this.records});
+
+  @override
+  Widget build(BuildContext context) {
+    final first = records.first;
+    final eventName = records
+            .map((r) => r.eventName)
+            .firstWhere((n) => n != null, orElse: () => null) ??
+        'Attendance';
+    final byCheck = {for (final r in records) r.checkType: r};
+
+    Attendance? recordFor(String check) => byCheck[check];
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.indigoLight,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  '${first.date.day}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primary,
+                  ),
+                ),
+                Text(
+                  _monthAbbr(first.date),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  eventName,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _CheckRow(
+                  label: 'AM Time In',
+                  icon: Icons.login_rounded,
+                  color: AppColors.info,
+                  record: recordFor(CheckType.amIn),
+                ),
+                _CheckRow(
+                  label: 'AM Time Out',
+                  icon: Icons.logout_rounded,
+                  color: AppColors.warning,
+                  record: recordFor(CheckType.amOut),
+                ),
+                _CheckRow(
+                  label: 'PM Time In',
+                  icon: Icons.login_rounded,
+                  color: AppColors.info,
+                  record: recordFor(CheckType.pmIn),
+                ),
+                _CheckRow(
+                  label: 'PM Time Out',
+                  icon: Icons.logout_rounded,
+                  color: AppColors.warning,
+                  record: recordFor(CheckType.pmOut),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _monthAbbr(DateTime d) {
+    const months = [
+      'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
+      'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
+    ];
+    return months[d.month - 1];
+  }
+}
+
+/// One Time In / Time Out line inside a [_DayAttendanceCard].
+class _CheckRow extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final Attendance? record;
+
+  const _CheckRow({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.record,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final rec = record;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: rec == null ? AppColors.border : color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            rec == null ? '—' : Formatters.time(rec.time),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: rec == null ? AppColors.textSecondary : AppColors.textPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

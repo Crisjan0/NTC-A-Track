@@ -435,6 +435,23 @@ class DatabaseService {
     );
   }
 
+  /// Distinct courses that have attendance records for [eventId], with the
+  /// number of records per course (drill-down: event → course → students).
+  Future<Map<String, int>> courseCountsForEvent(int eventId) async {
+    final db = await database;
+    final rows = await db.rawQuery('''
+      SELECT s.course, COUNT(*) AS c
+      FROM $kAttendanceTable a
+      JOIN $kStudentsTable s ON s.student_id = a.student_id
+      WHERE a.event_id = ?
+      GROUP BY s.course
+      ORDER BY c DESC, s.course ASC
+    ''', [eventId]);
+    return {
+      for (final r in rows) r['course'] as String: (r['c'] as num).toInt(),
+    };
+  }
+
   /// Attendance count per event, keyed by event id.
   Future<Map<int, int>> attendanceCountByEvent() async {
     final db = await database;

@@ -9,12 +9,16 @@ class GradientHeader extends StatelessWidget {
   final IconData icon;
   final Widget? trailing;
 
+  /// Replaces the default icon box (e.g. a back button) when provided.
+  final Widget? leading;
+
   const GradientHeader({
     super.key,
     required this.title,
     this.subtitle,
     this.icon = Icons.school_rounded,
     this.trailing,
+    this.leading,
   });
 
   @override
@@ -32,14 +36,15 @@ class GradientHeader extends StatelessWidget {
         bottom: false,
         child: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(icon, color: Colors.white, size: 26),
-            ),
+            leading ??
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(icon, color: Colors.white, size: 26),
+                ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(

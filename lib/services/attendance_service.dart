@@ -122,6 +122,10 @@ class AttendanceService {
   Future<Map<int, int>> attendanceCountByEvent() =>
       _db.attendanceCountByEvent();
 
+  /// Distinct courses that have attendance records for [eventId], with counts.
+  Future<Map<String, int>> courseCountsForEvent(int eventId) =>
+      _db.courseCountsForEvent(eventId);
+
   Future<int> createEvent(String name, {bool setActive = false}) =>
       _db.insertEvent(name, setActive: setActive);
 

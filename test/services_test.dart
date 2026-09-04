@@ -273,5 +273,21 @@ void main() {
         isTrue,
       );
     });
+
+    test('course counts for an event group records by course', () async {
+      // Accrue two Intrams records for a BS Information Technology student
+      // (2026-0003) and none for the default event's BSIT students at first.
+      final intramsId =
+          await AttendanceService.instance.createEvent('Intrams');
+      await AttendanceService.instance.setActiveEvent(intramsId);
+      await AttendanceService.instance.recordFromScan('2026-0003');
+      await AttendanceService.instance.recordFromScan('2026-0005');
+
+      final counts =
+          await AttendanceService.instance.courseCountsForEvent(intramsId);
+      expect(counts[kCourses[0]], 1); // 2026-0003 is BSIT
+      expect(counts[kCourses[1]], 1); // 2026-0005 is BSCS
+      expect(counts.length, 2);
+    });
   });
 }

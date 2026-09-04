@@ -8,6 +8,7 @@ import '../../utils/formatters.dart';
 import '../../widgets/attendance_card.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/gradient_header.dart';
+import 'event_attendance_browse_screen.dart';
 
 /// Admin attendance records: searchable + filterable by date, course,
 /// year level and status.
@@ -82,6 +83,13 @@ class _AttendanceManagementScreenState
     _load();
   }
 
+  Future<void> _openBrowse() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const EventAttendanceBrowseScreen()),
+    );
+    _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -93,9 +101,65 @@ class _AttendanceManagementScreenState
             icon: Icons.event_note_rounded,
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             child: Column(
               children: [
+                Material(
+                  color: AppColors.indigoLight,
+                  borderRadius: BorderRadius.circular(14),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: _openBrowse,
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              gradient: AppGradients.primary,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.account_tree_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Browse by Event',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Event → Course → Student records',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.chevron_right_rounded,
+                            color: AppColors.primary,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
                 TextField(
                   controller: _searchController,
                   onChanged: (_) => _load(),

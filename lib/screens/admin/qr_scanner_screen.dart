@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../models/attendance_model.dart';
+import '../../models/event_model.dart';
 import '../../models/student_model.dart';
 import '../../services/attendance_service.dart';
 import '../../services/session_service.dart';
@@ -10,6 +11,7 @@ import '../../utils/formatters.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/gradient_header.dart';
 import '../auth/role_selection_screen.dart';
+import 'event_management_screen.dart';
 
 /// Dedicated admin QR scanner: opens the camera, decodes a student QR,
 /// and records attendance (or reports duplicate / invalid codes).
@@ -28,6 +30,19 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
 
   bool _handling = false;
   bool _torchOn = false;
+  AttendanceEvent? _activeEvent;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadActiveEvent();
+  }
+
+  Future<void> _loadActiveEvent() async {
+    final event = await AttendanceService.instance.activeEvent();
+    if (!mounted) return;
+    setState(() => _activeEvent = event);
+  }
 
   @override
   void dispose() {
@@ -135,21 +150,54 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
               ),
             ),
           ),
-          // Hint text above the scan frame.
+          // Active event pill + hint text above the scan frame.
           Positioned(
             left: 24,
             right: 24,
             bottom: 140,
-            child: Center(
-              child: Text(
-                'Align the student\'s QR code inside the frame',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.85),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
+            child: Column(
+              children: [
+                if (_activeEvent != null)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.emoji_events_rounded,
+                          color: Colors.white,
+                          size: 14,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Event: ${_activeEvent!.name}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                Text(
+                  'Align the student\'s QR code inside the frame',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.85),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
           // Bottom controls: torch + switch camera.
@@ -383,7 +431,11 @@ class _ScanResultDialog extends StatelessWidget {
           iconBg: AppColors.successLight,
           title: 'Attendance Recorded Successfully',
           onClose: onClose,
-          child: _StudentSummary(student: student!, record: record),
+          child: _StudentSummary(
+            student: student!,
+            record: record,
+            eventName: result.eventName,
+          ),
         );
       case AttendanceResultType.alreadyRecorded:
         return _OutcomeDialog(
@@ -528,11 +580,17 @@ class _OutcomeDialog extends StatelessWidget {
 class _StudentSummary extends StatelessWidget {
   final Student student;
   final Attendance? record;
+  final String? eventName;
 
-  const _StudentSummary({required this.student, required this.record});
+  const _StudentSummary({
+    required this.student,
+    required this.record,
+    this.eventName,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final event = eventName;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
@@ -547,6 +605,8 @@ class _StudentSummary extends StatelessWidget {
           _SummaryRow(label: 'Name', value: student.fullName),
           _SummaryRow(label: 'Course', value: student.course),
           _SummaryRow(label: 'Year Level', value: student.yearLevel),
+          if (event != null && event.isNotEmpty)
+            _SummaryRow(label: 'Event', value: event),
           if (record != null) ...[
             _SummaryRow(
               label: 'Date',
@@ -639,17 +699,45 @@ class _PresentBadge extends StatelessWidget {
 
 /// Landing page for the Scan tab: instructions + button that opens the
 /// full-screen camera scanner.
-class QrScanLandingPage extends StatelessWidget {
+class QrScanLandingPage extends StatefulWidget {
   const QrScanLandingPage({super.key});
+
+  @override
+  State<QrScanLandingPage> createState() => _QrScanLandingPageState();
+}
+
+class _QrScanLandingPageState extends State<QrScanLandingPage> {
+  AttendanceEvent? _activeEvent;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEvent();
+  }
+
+  Future<void> _loadEvent() async {
+    final event = await AttendanceService.instance.activeEvent();
+    if (!mounted) return;
+    setState(() => _activeEvent = event);
+  }
+
+  Future<void> _openEventManagement() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const EventManagementScreen()),
+    );
+    await _loadEvent();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Column(
         children: [
-          const GradientHeader(
+          GradientHeader(
             title: 'Scan QR Code',
-            subtitle: 'Record attendance in one scan',
+            subtitle: _activeEvent == null
+                ? 'Record attendance in one scan'
+                : 'Recording to: ${_activeEvent!.name}',
             icon: Icons.qr_code_scanner_rounded,
           ),
           Expanded(
@@ -657,6 +745,11 @@ class QrScanLandingPage extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
+                  _ActiveEventCard(
+                    event: _activeEvent,
+                    onManage: _openEventManagement,
+                  ),
+                  const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
@@ -739,6 +832,87 @@ class QrScanLandingPage extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Compact card showing the event attendance is currently recorded to.
+class _ActiveEventCard extends StatelessWidget {
+  final AttendanceEvent? event;
+  final VoidCallback onManage;
+
+  const _ActiveEventCard({required this.event, required this.onManage});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: AppGradients.primary,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.25),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.emoji_events_rounded,
+              color: Colors.white,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'ACTIVE EVENT',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1,
+                    color: Colors.white70,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  event?.name ?? 'General Attendance',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: onManage,
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.white,
+              backgroundColor: Colors.white.withValues(alpha: 0.18),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+            ),
+            child: const Text(
+              'Change',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
             ),
           ),
         ],

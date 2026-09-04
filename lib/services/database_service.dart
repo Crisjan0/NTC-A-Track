@@ -4,6 +4,7 @@ import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
 import '../models/attendance_model.dart';
+import '../models/event_model.dart';
 import '../models/student_model.dart';
 import '../models/user_model.dart';
 import '../utils/constants.dart';
@@ -14,8 +15,10 @@ import '../utils/formatters.dart';
 /// Tables:
 ///  - [kUsersTable]: admin accounts
 ///  - [kStudentsTable]: student records (credentials included for demo login)
-///  - [kAttendanceTable]: one record per student per day (UNIQUE constraint
-///    prevents duplicate attendance at the database level)
+///  - [kEventsTable]: attendance events (e.g. "Intrams"); exactly one is
+///    active at a time and QR scans are recorded to it
+///  - [kAttendanceTable]: one record per student per day per event (UNIQUE
+///    constraint prevents duplicate attendance at the database level)
 class DatabaseService {
   DatabaseService._();
 
@@ -24,7 +27,12 @@ class DatabaseService {
   static const String dbName = 'attendance_system.db';
   static const String kUsersTable = 'users';
   static const String kStudentsTable = 'students';
+  static const String kEventsTable = 'events';
   static const String kAttendanceTable = 'attendance';
+
+  /// Default event used on first launch and as a fallback when the admin
+  /// has not created (and activated) their own event yet.
+  static const String defaultEventName = 'General Attendance';
 
   Database? _db;
 
@@ -52,13 +60,18 @@ class DatabaseService {
         p.join(await getDatabasesPath(), dbName);
     return openDatabase(
       path,
-      version: 1,
+      version: 2,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
       onCreate: (db, version) async {
         await _createTables(db);
         await _seed(db);
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await _migrateToV2(db);
+        }
       },
     );
   }
@@ -89,7 +102,28 @@ class DatabaseService {
       )
     ''');
 
-    // One record per student per day → duplicates are impossible at DB level.
+    await _createEventsTable(db);
+    await _createAttendanceTable(db);
+
+    await db.execute(
+      'CREATE INDEX idx_attendance_date ON $kAttendanceTable (date)',
+    );
+  }
+
+  Future<void> _createEventsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE $kEventsTable (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        is_active INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL
+      )
+    ''');
+  }
+
+  // One record per student per day per event → duplicates are impossible at
+  // DB level, while a student can still attend several events in one day.
+  Future<void> _createAttendanceTable(Database db) async {
     await db.execute('''
       CREATE TABLE $kAttendanceTable (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -97,19 +131,60 @@ class DatabaseService {
         date TEXT NOT NULL,
         time TEXT NOT NULL,
         status TEXT NOT NULL DEFAULT 'PRESENT',
+        event_id INTEGER,
         created_at TEXT NOT NULL,
-        UNIQUE (student_id, date),
-        FOREIGN KEY (student_id) REFERENCES $kStudentsTable (student_id) ON DELETE CASCADE
+        UNIQUE (student_id, date, event_id),
+        FOREIGN KEY (student_id) REFERENCES $kStudentsTable (student_id) ON DELETE CASCADE,
+        FOREIGN KEY (event_id) REFERENCES $kEventsTable (id) ON DELETE SET NULL
       )
     ''');
+  }
 
+  /// v1 → v2: adds the events table, tags existing attendance with a default
+  /// event, and widens the unique constraint so attendance is unique per
+  /// student per day *per event*.
+  Future<void> _migrateToV2(Database db) async {
+    await _createEventsTable(db);
+    final defaultEventId =
+        await _insertEvent(db, name: defaultEventName, isActive: true);
+
+    // SQLite cannot alter a UNIQUE constraint, so rebuild the table.
+    await db.execute(
+      'ALTER TABLE $kAttendanceTable ADD COLUMN event_id INTEGER',
+    );
+
+    await db.execute('''
+      CREATE TABLE ${kAttendanceTable}_v2 (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id TEXT NOT NULL,
+        date TEXT NOT NULL,
+        time TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'PRESENT',
+        event_id INTEGER,
+        created_at TEXT NOT NULL,
+        UNIQUE (student_id, date, event_id),
+        FOREIGN KEY (student_id) REFERENCES $kStudentsTable (student_id) ON DELETE CASCADE,
+        FOREIGN KEY (event_id) REFERENCES $kEventsTable (id) ON DELETE SET NULL
+      )
+    ''');
+    await db.execute('''
+      INSERT INTO ${kAttendanceTable}_v2
+        (id, student_id, date, time, status, event_id, created_at)
+      SELECT id, student_id, date, time, status, ?, created_at
+      FROM $kAttendanceTable
+    ''', [defaultEventId]);
+    await db.execute('DROP TABLE $kAttendanceTable');
+    await db.execute(
+      'ALTER TABLE ${kAttendanceTable}_v2 RENAME TO $kAttendanceTable',
+    );
     await db.execute(
       'CREATE INDEX idx_attendance_date ON $kAttendanceTable (date)',
     );
   }
 
   /// Seeds demo data on first launch so the app is usable immediately:
-  /// an admin account, five students, and attendance history for this week.
+  /// an admin account, five students, a default active event, and
+  /// attendance history for this week.
   Future<void> _seed(Database db) async {
     final adminHash = hashPassword(DemoCredentials.adminPassword, salt: null);
     await db.insert(kUsersTable, {
@@ -143,6 +218,10 @@ class DatabaseService {
       });
     }
 
+    // Every seeded record belongs to the default (active) event.
+    final defaultEventId =
+        await _insertEvent(db, name: defaultEventName, isActive: true);
+
     // A few days of history so dashboards and stats look alive.
     // dayOffset 0 = today, 1 = yesterday, etc. Maps: student index (1-based)
     // → presence that day.
@@ -166,6 +245,7 @@ class DatabaseService {
           'time': '${recordTime.hour.toString().padLeft(2, '0')}:'
               '${recordTime.minute.toString().padLeft(2, '0')}',
           'status': AttendanceStatus.present,
+          'event_id': defaultEventId,
           'created_at': day.toIso8601String(),
         });
       }
@@ -282,13 +362,131 @@ class DatabaseService {
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
-  /// Existing attendance record for a student on a given date, if any.
-  Future<Attendance?> findAttendance(String studentId, String date) async {
+  // --------------------------------------------------------------- events
+
+  /// The single event QR scans currently record to, if any.
+  Future<AttendanceEvent?> getActiveEvent() async {
+    final db = await database;
+    final rows = await db.query(
+      kEventsTable,
+      where: 'is_active = 1',
+      limit: 1,
+    );
+    return rows.isEmpty ? null : AttendanceEvent.fromMap(rows.first);
+  }
+
+  Future<List<AttendanceEvent>> getAllEvents() async {
+    final db = await database;
+    final rows = await db.query(
+      kEventsTable,
+      orderBy: 'is_active DESC, created_at ASC',
+    );
+    return rows.map(AttendanceEvent.fromMap).toList();
+  }
+
+  /// Creates an event, optionally activating it right away.
+  Future<int> insertEvent(String name, {bool setActive = false}) async {
+    final db = await database;
+    return _insertEvent(db, name: name, isActive: setActive);
+  }
+
+  /// Makes [id] the active event (all others become inactive).
+  Future<void> setActiveEvent(int id) async {
+    final db = await database;
+    await _setActive(db, id);
+  }
+
+  /// Deletes a non-active event. Its attendance rows are kept but lose the
+  /// event tag (FK ON DELETE SET NULL). Returns false if the event is
+  /// currently active, so the active event can never be removed.
+  Future<bool> deleteEvent(int id) async {
+    final db = await database;
+    final rows = await db.query(
+      kEventsTable,
+      columns: ['is_active'],
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (rows.isEmpty) return false;
+    if ((rows.first['is_active'] as int?) == 1) return false;
+    await db.delete(kEventsTable, where: 'id = ?', whereArgs: [id]);
+    return true;
+  }
+
+  /// The active event, creating (and activating) the default one if the
+  /// admin has not set up any event yet.
+  Future<AttendanceEvent> ensureActiveEvent() async {
+    final active = await getActiveEvent();
+    if (active != null) return active;
+
+    final events = await getAllEvents();
+    if (events.isNotEmpty) {
+      await setActiveEvent(events.first.id!);
+      return events.first;
+    }
+
+    final id = await insertEvent(defaultEventName, setActive: true);
+    return AttendanceEvent(
+      id: id,
+      name: defaultEventName,
+      isActive: true,
+      createdAt: DateTime.now(),
+    );
+  }
+
+  /// Attendance count per event, keyed by event id.
+  Future<Map<int, int>> attendanceCountByEvent() async {
+    final db = await database;
+    final rows = await db.rawQuery(
+      'SELECT event_id, COUNT(*) AS c FROM $kAttendanceTable '
+      'WHERE event_id IS NOT NULL GROUP BY event_id',
+    );
+    return {
+      for (final r in rows)
+        if (r['event_id'] is int) r['event_id'] as int: (r['c'] as num).toInt(),
+    };
+  }
+
+  Future<int> _insertEvent(
+    Database db, {
+    required String name,
+    bool isActive = false,
+  }) async {
+    final id = await db.insert(kEventsTable, {
+      'name': name.trim(),
+      'is_active': 0,
+      'created_at': DateTime.now().toIso8601String(),
+    });
+    if (isActive) {
+      await _setActive(db, id);
+    }
+    return id;
+  }
+
+  Future<void> _setActive(Database db, int id) async {
+    await db.rawUpdate('UPDATE $kEventsTable SET is_active = 0');
+    await db.update(
+      kEventsTable,
+      {'is_active': 1},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // ----------------------------------------------------------- attendance
+
+  /// Existing record for a student on a given date and event, if any.
+  Future<Attendance?> findAttendance(
+    String studentId,
+    String date,
+    int eventId,
+  ) async {
     final db = await database;
     final rows = await db.query(
       kAttendanceTable,
-      where: 'student_id = ? AND date = ?',
-      whereArgs: [studentId, date],
+      where: 'student_id = ? AND date = ? AND event_id = ?',
+      whereArgs: [studentId, date, eventId],
       limit: 1,
     );
     return rows.isEmpty ? null : Attendance.fromMap(rows.first);
@@ -299,30 +497,34 @@ class DatabaseService {
     return db.insert(kAttendanceTable, attendance.toMap());
   }
 
-  /// Recent attendance joined with student names, newest first.
+  /// Recent attendance joined with student + event names, newest first.
   Future<List<Attendance>> recentAttendance({int limit = 8}) async {
     final db = await database;
     final rows = await db.rawQuery('''
       SELECT a.*,
              s.first_name || ' ' || s.last_name AS full_name,
              s.course,
-             s.year_level
+             s.year_level,
+             e.name AS event_name
       FROM $kAttendanceTable a
       JOIN $kStudentsTable s ON s.student_id = a.student_id
+      LEFT JOIN $kEventsTable e ON e.id = a.event_id
       ORDER BY a.date DESC, a.time DESC
       LIMIT ?
     ''', [limit]);
     return rows.map(Attendance.fromMap).toList();
   }
 
-  /// All attendance records joined with student names, newest first,
-  /// optionally filtered by search text, date, course, year level and status.
+  /// All attendance records joined with student + event names, newest first,
+  /// optionally filtered by search text, date, course, year level, status
+  /// or event.
   Future<List<Attendance>> queryAttendance({
     String? search,
     String? date,
     String? course,
     String? yearLevel,
     String? status,
+    int? eventId,
   }) async {
     final db = await database;
     final where = <String>[];
@@ -351,14 +553,20 @@ class DatabaseService {
       where.add('a.status = ?');
       args.add(status);
     }
+    if (eventId != null) {
+      where.add('a.event_id = ?');
+      args.add(eventId);
+    }
 
     final sql = '''
       SELECT a.*,
              s.first_name || ' ' || s.last_name AS full_name,
              s.course,
-             s.year_level
+             s.year_level,
+             e.name AS event_name
       FROM $kAttendanceTable a
       JOIN $kStudentsTable s ON s.student_id = a.student_id
+      LEFT JOIN $kEventsTable e ON e.id = a.event_id
       ${where.isEmpty ? '' : 'WHERE ${where.join(' AND ')}'}
       ORDER BY a.date DESC, a.time DESC
     ''';
@@ -376,15 +584,17 @@ class DatabaseService {
     return rows.map((r) => r['date'] as String).toList();
   }
 
-  /// A student's own attendance history, newest first.
+  /// A student's own attendance history, newest first, with event names.
   Future<List<Attendance>> attendanceForStudent(String studentId) async {
     final db = await database;
-    final rows = await db.query(
-      kAttendanceTable,
-      where: 'student_id = ?',
-      whereArgs: [studentId],
-      orderBy: 'date DESC, time DESC',
-    );
+    final rows = await db.rawQuery('''
+      SELECT a.*,
+             e.name AS event_name
+      FROM $kAttendanceTable a
+      LEFT JOIN $kEventsTable e ON e.id = a.event_id
+      WHERE a.student_id = ?
+      ORDER BY a.date DESC, a.time DESC
+    ''', [studentId]);
     return rows.map(Attendance.fromMap).toList();
   }
 }

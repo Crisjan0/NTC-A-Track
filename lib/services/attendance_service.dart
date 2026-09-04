@@ -1,4 +1,5 @@
 import '../models/attendance_model.dart';
+import '../models/event_model.dart';
 import '../models/student_model.dart';
 import '../utils/constants.dart';
 import '../utils/formatters.dart';
@@ -12,10 +13,14 @@ class AttendanceResult {
   final Attendance? attendance;
   final Student? student;
 
+  /// Name of the event the scan was recorded (or would have been recorded) to.
+  final String? eventName;
+
   const AttendanceResult({
     required this.type,
     this.attendance,
     this.student,
+    this.eventName,
   });
 }
 
@@ -57,9 +62,12 @@ class AttendanceService {
 
   final DatabaseService _db = DatabaseService.instance;
 
-  /// Core scan flow: resolve student, check today's record, insert if new.
+  /// Core scan flow: resolve student, check today's record for the active
+  /// event, insert if new.
   ///
-  /// Returns the outcome so the UI can show the right confirmation.
+  /// Returns the outcome so the UI can show the right confirmation. The
+  /// active event is used automatically (creating a default one if none
+  /// exists), so "one event at a time" scanning just works.
   Future<AttendanceResult> recordFromScan(String rawQrValue) async {
     final studentId = rawQrValue.trim();
     if (studentId.isEmpty) {
@@ -71,15 +79,17 @@ class AttendanceService {
       return const AttendanceResult(type: AttendanceResultType.studentNotFound);
     }
 
+    final event = await _db.ensureActiveEvent();
     final now = DateTime.now();
     final date = Formatters.dbDate(now);
 
-    final existing = await _db.findAttendance(studentId, date);
+    final existing = await _db.findAttendance(studentId, date, event.id!);
     if (existing != null) {
       return AttendanceResult(
         type: AttendanceResultType.alreadyRecorded,
         attendance: existing,
         student: student,
+        eventName: event.name,
       );
     }
 
@@ -88,6 +98,7 @@ class AttendanceService {
       date: now,
       time: now,
       status: AttendanceStatus.present,
+      eventId: event.id,
       createdAt: now,
     );
     await _db.insertAttendance(record);
@@ -96,8 +107,28 @@ class AttendanceService {
       type: AttendanceResultType.success,
       attendance: record,
       student: student,
+      eventName: event.name,
     );
   }
+
+  // ---------------------------------------------------------------- events
+
+  /// The event scans are currently recorded to (always non-null: a default
+  /// event is created if needed).
+  Future<AttendanceEvent> activeEvent() => _db.ensureActiveEvent();
+
+  Future<List<AttendanceEvent>> allEvents() => _db.getAllEvents();
+
+  Future<Map<int, int>> attendanceCountByEvent() =>
+      _db.attendanceCountByEvent();
+
+  Future<int> createEvent(String name, {bool setActive = false}) =>
+      _db.insertEvent(name, setActive: setActive);
+
+  Future<void> setActiveEvent(int id) => _db.setActiveEvent(id);
+
+  /// False if the event is currently active (which can never be deleted).
+  Future<bool> deleteEvent(int id) => _db.deleteEvent(id);
 
   Future<DashboardStats> dashboardStats() async {
     final totalStudents = await _db.countStudents();
@@ -120,6 +151,7 @@ class AttendanceService {
     String? course,
     String? yearLevel,
     String? status,
+    int? eventId,
   }) =>
       _db.queryAttendance(
         search: search,
@@ -127,6 +159,7 @@ class AttendanceService {
         course: course,
         yearLevel: yearLevel,
         status: status,
+        eventId: eventId,
       );
 
   /// A student's own history: every school day (dates that appear anywhere

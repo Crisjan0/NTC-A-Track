@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/attendance_model.dart';
+import '../../models/event_model.dart';
 import '../../services/attendance_service.dart';
 import '../../services/session_service.dart';
 import '../../utils/constants.dart';
@@ -11,6 +12,7 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/gradient_header.dart';
 import '../../widgets/section_title.dart';
 import 'admin_shell.dart';
+import 'event_management_screen.dart';
 import 'qr_scanner_screen.dart';
 import 'student_management_screen.dart';
 
@@ -29,6 +31,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   int _absentToday = 0;
   int _totalAttendance = 0;
   List<Attendance> _recent = [];
+  AttendanceEvent? _activeEvent;
 
   @override
   void initState() {
@@ -41,6 +44,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final stats = await AttendanceService.instance.dashboardStats();
     final recent =
         await AttendanceService.instance.recentAttendance(limit: 6);
+    final activeEvent = await AttendanceService.instance.activeEvent();
     if (!mounted) return;
     setState(() {
       _totalStudents = stats.totalStudents;
@@ -48,8 +52,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
       _absentToday = stats.absentToday;
       _totalAttendance = stats.totalAttendance;
       _recent = recent;
+      _activeEvent = activeEvent;
       _loading = false;
     });
+  }
+
+  Future<void> _openEvents() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const EventManagementScreen()),
+    );
+    await _load();
   }
 
   @override
@@ -190,6 +202,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       ],
                     ),
                     const SizedBox(height: 24),
+                    const SectionTitle(title: 'Active Event'),
+                    const SizedBox(height: 12),
+                    _ActiveEventBanner(
+                      event: _activeEvent,
+                      onManage: _openEvents,
+                    ),
+                    const SizedBox(height: 24),
                     const SectionTitle(
                       title: 'Recent Attendance',
                       actionLabel: 'View all',
@@ -223,6 +242,87 @@ class _AdminDashboardState extends State<AdminDashboard> {
   void _switchTab(int index) {
     // Ask the shell (an ancestor in the tree) to change tabs.
     context.findAncestorStateOfType<AdminShellState>()?.switchTo(index);
+  }
+}
+
+/// Banner showing which event attendance is currently being recorded to.
+class _ActiveEventBanner extends StatelessWidget {
+  final AttendanceEvent? event;
+  final VoidCallback onManage;
+
+  const _ActiveEventBanner({required this.event, required this.onManage});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: AppGradients.primary,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.25),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.emoji_events_rounded,
+              color: Colors.white,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'RECORDING ATTENDANCE TO',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1,
+                    color: Colors.white70,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  event?.name ?? 'General Attendance',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: onManage,
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.white,
+              backgroundColor: Colors.white.withValues(alpha: 0.18),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+            ),
+            child: const Text(
+              'Manage',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

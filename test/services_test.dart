@@ -192,4 +192,86 @@ void main() {
       );
     });
   });
+
+  group('Events', () {
+    test('a default event is seeded and active', () async {
+      final active = await AttendanceService.instance.activeEvent();
+      expect(active.name, DatabaseService.defaultEventName);
+      expect(active.isActive, isTrue);
+
+      final all = await AttendanceService.instance.allEvents();
+      expect(all.length, 1);
+    });
+
+    test('scans are recorded to the active event', () async {
+      final intramsId =
+          await AttendanceService.instance.createEvent('Intrams');
+      await AttendanceService.instance.setActiveEvent(intramsId);
+
+      final result =
+          await AttendanceService.instance.recordFromScan('2026-0003');
+      expect(result.type, AttendanceResultType.success);
+      expect(result.eventName, 'Intrams');
+      expect(result.attendance!.eventId, intramsId);
+    });
+
+    test('same student can attend two events in one day', () async {
+      // General Attendance (default, active) — 2026-0003 was absent today.
+      final first =
+          await AttendanceService.instance.recordFromScan('2026-0003');
+      expect(first.type, AttendanceResultType.success);
+      expect(first.eventName, DatabaseService.defaultEventName);
+
+      // A second scan for the same event is a duplicate.
+      final dup =
+          await AttendanceService.instance.recordFromScan('2026-0003');
+      expect(dup.type, AttendanceResultType.alreadyRecorded);
+
+      // Switching the active event allows a second record the same day.
+      final intramsId =
+          await AttendanceService.instance.createEvent('Intrams');
+      await AttendanceService.instance.setActiveEvent(intramsId);
+      final second =
+          await AttendanceService.instance.recordFromScan('2026-0003');
+      expect(second.type, AttendanceResultType.success);
+      expect(second.eventName, 'Intrams');
+    });
+
+    test('the active event cannot be deleted', () async {
+      final active = await AttendanceService.instance.activeEvent();
+      expect(await AttendanceService.instance.deleteEvent(active.id!), isFalse);
+
+      final id =
+          await AttendanceService.instance.createEvent('Foundation Day');
+      await AttendanceService.instance.setActiveEvent(id);
+      expect(await AttendanceService.instance.deleteEvent(id), isFalse);
+
+      final other =
+          await AttendanceService.instance.createEvent('Flag Ceremony');
+      expect(await AttendanceService.instance.deleteEvent(other), isTrue);
+    });
+
+    test('attendance can be filtered by event', () async {
+      final defaultId = (await AttendanceService.instance.activeEvent()).id!;
+
+      final intramsId =
+          await AttendanceService.instance.createEvent('Intrams');
+      await AttendanceService.instance.setActiveEvent(intramsId);
+      await AttendanceService.instance.recordFromScan('2026-0003');
+
+      final intramsRecords = await AttendanceService.instance
+          .queryAttendance(eventId: intramsId);
+      expect(intramsRecords, hasLength(1));
+      expect(intramsRecords.first.eventName, 'Intrams');
+      expect(intramsRecords.first.eventId, intramsId);
+
+      final generalRecords =
+          await AttendanceService.instance.queryAttendance(eventId: defaultId);
+      expect(generalRecords, isNotEmpty);
+      expect(
+        generalRecords.every((r) => r.eventId == defaultId),
+        isTrue,
+      );
+    });
+  });
 }

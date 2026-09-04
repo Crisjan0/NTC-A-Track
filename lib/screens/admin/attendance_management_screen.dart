@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/attendance_model.dart';
+import '../../models/event_model.dart';
 import '../../services/attendance_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/formatters.dart';
@@ -24,12 +25,14 @@ class _AttendanceManagementScreenState
   final _searchController = TextEditingController();
 
   List<Attendance> _records = [];
+  List<AttendanceEvent> _events = [];
   bool _loading = true;
 
   String? _date;
   String? _course;
   String? _yearLevel;
   String? _status;
+  int? _eventId;
 
   @override
   void initState() {
@@ -45,12 +48,16 @@ class _AttendanceManagementScreenState
 
   Future<void> _load() async {
     setState(() => _loading = true);
+    if (_events.isEmpty) {
+      _events = await _service.allEvents();
+    }
     final records = await _service.queryAttendance(
       search: _searchController.text,
       date: _date,
       course: _course,
       yearLevel: _yearLevel,
       status: _status,
+      eventId: _eventId,
     );
     if (!mounted) return;
     setState(() {
@@ -153,6 +160,19 @@ class _AttendanceManagementScreenState
                       ),
                       const SizedBox(width: 8),
                       _FilterChip(
+                        label: _eventLabel,
+                        icon: Icons.emoji_events_rounded,
+                        active: _eventId != null,
+                        onTap: () => _showEventSheet(),
+                        onClear: _eventId == null
+                            ? null
+                            : () {
+                                setState(() => _eventId = null);
+                                _load();
+                              },
+                      ),
+                      const SizedBox(width: 8),
+                      _FilterChip(
                         label: _status ?? 'All Status',
                         icon: Icons.flag_rounded,
                         active: _status != null,
@@ -217,6 +237,19 @@ class _AttendanceManagementScreenState
     _load();
   }
 
+  Future<void> _showEventSheet() async {
+    final picked = await _showPickerSheet<String>(
+      title: 'Filter by Event',
+      items: _events.map((e) => e.name).toList(),
+    );
+    if (picked == null) return;
+    setState(() {
+      final match = _events.where((e) => e.name == picked).toList();
+      _eventId = picked == '' ? null : (match.isEmpty ? null : match.first.id);
+    });
+    _load();
+  }
+
   Future<void> _showStatusSheet() async {
     final picked = await _showPickerSheet<String>(
       title: 'Filter by Status',
@@ -228,6 +261,12 @@ class _AttendanceManagementScreenState
     if (picked == null) return;
     setState(() => _status = picked == '' ? null : picked);
     _load();
+  }
+
+  String get _eventLabel {
+    if (_eventId == null) return 'All Events';
+    final match = _events.where((e) => e.id == _eventId).toList();
+    return match.isEmpty ? 'All Events' : match.first.name;
   }
 
   Future<String?> _showPickerSheet<T>({

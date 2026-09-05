@@ -56,6 +56,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final p = AppTheme.paletteOf(context);
+    final scheme = Theme.of(context).colorScheme;
     final student = _student;
     final session = SessionService.instance.current;
 
@@ -75,7 +77,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               ),
             ),
             SliverPadding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
               sliver: SliverList.list(
                 children: [
                   if (_loading)
@@ -86,90 +88,77 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                   else if (student == null)
                     const SizedBox()
                   else ...[
-                    // Personal info glass card with gradient identity plate.
+                    // Personal info — one clean frosted surface.
                     GlassPanel(
                       radius: kCardRadius,
                       blur: 24,
                       strong: true,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: AppGradients.primary,
-                          borderRadius: BorderRadius.circular(kCardRadius - 1),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(18),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                      padding: const EdgeInsets.all(18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          Colors.white.withValues(alpha: 0.2),
-                                      borderRadius: BorderRadius.circular(14),
-                                      border: Border.all(
-                                        color: Colors.white
-                                            .withValues(alpha: 0.3),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  gradient: AppGradients.primary,
+                                  borderRadius: BorderRadius.circular(14),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.primary
+                                          .withValues(alpha: 0.25),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.school_rounded,
+                                  color: Colors.white,
+                                  size: 28,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      student.fullName,
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w800,
+                                        color: p.textPrimary,
+                                        letterSpacing: -0.3,
                                       ),
                                     ),
-                                    child: const Icon(
-                                      Icons.school_rounded,
-                                      color: Colors.white,
-                                      size: 28,
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      student.studentId,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: scheme.primary,
+                                        letterSpacing: 0.8,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          student.fullName,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w800,
-                                            shadows: [
-                                              Shadow(
-                                                color: Colors.black26,
-                                                blurRadius: 8,
-                                                offset: Offset(0, 1),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          student.studentId,
-                                          style: TextStyle(
-                                            color: Colors.white
-                                                .withValues(alpha: 0.92),
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w700,
-                                            letterSpacing: 0.8,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 14),
-                              _InfoLine(
-                                label: 'Course',
-                                value: student.course,
-                              ),
-                              const SizedBox(height: 8),
-                              _InfoLine(
-                                label: 'Year Level',
-                                value: student.yearLevel,
+                                  ],
+                                ),
                               ),
                             ],
                           ),
-                        ),
+                          const SizedBox(height: 16),
+                          _InfoLine(
+                            label: 'Course',
+                            value: student.course,
+                          ),
+                          const SizedBox(height: 8),
+                          _InfoLine(
+                            label: 'Year Level',
+                            value: student.yearLevel,
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -236,7 +225,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                           child: _QuickAction(
                             icon: Icons.event_note_rounded,
                             label: 'My Attendance',
-                            gradient: AppGradients.success,
+                            gradient: AppGradients.orange,
                             onTap: () => _switchTab(2),
                           ),
                         ),
@@ -266,6 +255,7 @@ class _InfoLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = AppTheme.paletteOf(context);
     return Row(
       children: [
         Text(
@@ -273,17 +263,17 @@ class _InfoLine extends StatelessWidget {
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: Colors.white.withValues(alpha: 0.85),
+            color: p.textSecondary,
           ),
         ),
         Expanded(
           child: Text(
             value,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
-              color: Colors.white,
+              color: p.textPrimary,
             ),
           ),
         ),

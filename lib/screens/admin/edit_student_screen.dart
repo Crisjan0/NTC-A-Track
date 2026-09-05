@@ -80,6 +80,7 @@ class _EditStudentScreenState extends State<EditStudentScreen> {
             title: 'Edit Student',
             subtitle: widget.student.fullName,
             icon: Icons.edit_rounded,
+            leading: const GlassBackButton(),
           ),
           Expanded(
             child: SingleChildScrollView(

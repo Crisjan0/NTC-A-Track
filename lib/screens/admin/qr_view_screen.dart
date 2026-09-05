@@ -22,6 +22,7 @@ class QrViewScreen extends StatelessWidget {
             title: 'Student QR Code',
             subtitle: student.studentId,
             icon: Icons.qr_code_2_rounded,
+            leading: const GlassBackButton(),
           ),
           Expanded(
             child: SingleChildScrollView(

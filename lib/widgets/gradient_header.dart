@@ -4,6 +4,25 @@ import '../utils/app_theme.dart';
 import '../utils/constants.dart';
 import 'glass_panel.dart';
 
+/// Frosted round back button used by pushed pages inside [GradientHeader].
+class GlassBackButton extends StatelessWidget {
+  const GlassBackButton({super.key, this.onPressed});
+
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      onPressed: onPressed ?? () => Navigator.of(context).maybePop(),
+      icon: const Icon(Icons.arrow_back_ios_new_rounded,
+          color: Colors.white, size: 18),
+      style: IconButton.styleFrom(
+        backgroundColor: Colors.white.withValues(alpha: 0.2),
+      ),
+    );
+  }
+}
+
 /// A frosted "liquid glass" banner used as the top of dashboards and lists:
 /// a translucent gradient-tinted glass plate floating over the wallpaper.
 class GradientHeader extends StatelessWidget {

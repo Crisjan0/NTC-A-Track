@@ -60,6 +60,7 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
             title: 'Add Student',
             subtitle: 'A unique QR code is created automatically',
             icon: Icons.person_add_alt_1_rounded,
+            leading: const GlassBackButton(),
           ),
           Expanded(
             child: SingleChildScrollView(

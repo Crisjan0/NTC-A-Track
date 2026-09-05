@@ -145,6 +145,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                 ? 'No active event yet'
                 : 'Scans are recorded to: ${active.first.name}',
             icon: Icons.emoji_events_rounded,
+            leading: const GlassBackButton(),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),

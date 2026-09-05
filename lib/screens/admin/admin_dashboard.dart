@@ -12,12 +12,9 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/glass_panel.dart';
 import '../../widgets/gradient_header.dart';
 import '../../widgets/section_title.dart';
-import 'admin_shell.dart';
 import 'event_management_screen.dart';
-import 'qr_scanner_screen.dart';
-import 'student_management_screen.dart';
 
-/// Admin dashboard: summary stats, quick actions and recent attendance.
+/// Admin dashboard: summary stats, active event and recent attendance.
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
 
@@ -144,64 +141,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       ],
                     ),
                     const SizedBox(height: 24),
-                    const SectionTitle(title: 'Quick Actions'),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _QuickAction(
-                            icon: Icons.qr_code_scanner_rounded,
-                            label: 'Scan QR',
-                            gradient: AppGradients.primary,
-                            onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const QrScannerScreen(),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _QuickAction(
-                            icon: Icons.person_add_alt_1_rounded,
-                            label: 'Add Student',
-                            gradient: AppGradients.success,
-                            onTap: () async {
-                              await Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      const StudentManagementScreen(addMode: true),
-                                ),
-                              );
-                              _load();
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _QuickAction(
-                            icon: Icons.group_rounded,
-                            label: 'Students',
-                            gradient: AppGradients.warning,
-                            onTap: () => _switchTab(1),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _QuickAction(
-                            icon: Icons.event_note_rounded,
-                            label: 'Attendance',
-                            gradient: AppGradients.info,
-                            onTap: () => _switchTab(3),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
                     const SectionTitle(title: 'Active Event'),
                     const SizedBox(height: 12),
                     _ActiveEventBanner(
@@ -238,11 +177,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
     );
   }
-
-  void _switchTab(int index) {
-    // Ask the shell (an ancestor in the tree) to change tabs.
-    context.findAncestorStateOfType<AdminShellState>()?.switchTo(index);
-  }
 }
 
 /// Banner showing which event attendance is currently being recorded to.
@@ -254,27 +188,26 @@ class _ActiveEventBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
+    final p = AppTheme.paletteOf(context);
+    final scheme = Theme.of(context).colorScheme;
+    return GlassPanel(
+      radius: 18,
+      blur: 20,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: AppGradients.primary,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.25),
-            blurRadius: 14,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.18),
+              gradient: AppGradients.orange,
               borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.orange.withValues(alpha: 0.25),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
             child: const Icon(
               Icons.emoji_events_rounded,
@@ -287,22 +220,22 @@ class _ActiveEventBanner extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'RECORDING ATTENDANCE TO',
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1,
-                    color: Colors.white70,
+                    color: p.textSecondary,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   eventName ?? 'General Attendance',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
-                    color: Colors.white,
+                    color: p.textPrimary,
                   ),
                 ),
               ],
@@ -311,69 +244,19 @@ class _ActiveEventBanner extends StatelessWidget {
           TextButton(
             onPressed: onManage,
             style: TextButton.styleFrom(
-              foregroundColor: Colors.white,
-              backgroundColor: Colors.white.withValues(alpha: 0.18),
+              foregroundColor: scheme.primary,
+              backgroundColor: scheme.primary.withValues(alpha: 0.1),
               padding: const EdgeInsets.symmetric(horizontal: 12),
             ),
-            child: const Text(
+            child: Text(
               'Manage',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+                color: scheme.primary,
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _QuickAction extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final LinearGradient gradient;
-  final VoidCallback onTap;
-
-  const _QuickAction({
-    required this.icon,
-    required this.label,
-    required this.gradient,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final p = AppTheme.paletteOf(context);
-    return GlassPanel(
-      radius: 16,
-      blur: 18,
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              gradient: gradient,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.2),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Icon(icon, color: Colors.white, size: 22),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: p.textPrimary,
-            ),
-          ),
-        ],
+          ),        ],
       ),
     );
   }

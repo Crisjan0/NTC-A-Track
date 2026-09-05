@@ -138,7 +138,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             label: 'Total Attendance',
                             value: '$_totalAttendance',
                             icon: Icons.event_available_rounded,
-                            gradient: AppGradients.warning,
+                            gradient: AppGradients.orange,
                           ),
                         ),
                       ],

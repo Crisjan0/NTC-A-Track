@@ -332,7 +332,7 @@ class _ActiveBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = AppTheme.paletteOf(context);
     final color =
-        p.isDark ? const Color(0xFF34D399) : AppColors.success;
+        p.isDark ? AppColors.successBright : AppColors.success;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(

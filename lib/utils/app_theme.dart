@@ -19,15 +19,24 @@ class AppTheme {
   static ThemeData get dark => _build(GlassPalette.dark);
 
   static ThemeData _build(GlassPalette p) {
+    // Navy in light mode; in dark mode the accent is lifted so primary-tinted
+    // text/icons stay readable on dark glass.
+    final primary = p.isDark ? const Color(0xFF9AA7FF) : AppColors.primary;
+    final onPrimary = p.isDark ? const Color(0xFF1B2157) : Colors.white;
     final scheme = ColorScheme.fromSeed(
       seedColor: AppColors.primary,
       brightness: p.brightness,
-      primary: AppColors.primary,
-      onPrimary: Colors.white,
+      primary: primary,
+      onPrimary: onPrimary,
       primaryContainer: p.primaryContainer,
       onPrimaryContainer: p.onPrimaryContainer,
-      secondary: AppColors.violet,
-      surface: p.isDark ? const Color(0xFF18162E) : Colors.white,
+      secondary: p.isDark ? const Color(0xFFFFA14F) : AppColors.orange,
+      onSecondary: p.isDark ? const Color(0xFF461B00) : Colors.white,
+      secondaryContainer:
+          p.isDark ? const Color(0xFF5B2C08) : AppColors.orangeLight,
+      onSecondaryContainer:
+          p.isDark ? const Color(0xFFFFDCC0) : AppColors.orange,
+      surface: p.isDark ? const Color(0xFF141735) : Colors.white,
       error: AppColors.danger,
       onSurface: p.textPrimary,
       onSurfaceVariant: p.textSecondary,
@@ -288,14 +297,14 @@ class AppTheme {
         ),
         trackColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
-              ? const Color(0xFF34C759)
+              ? AppColors.switchGreen
               : p.isDark
                   ? Colors.white.withValues(alpha: 0.25)
                   : Colors.white.withValues(alpha: 0.6),
         ),
         trackOutlineColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
-              ? const Color(0xFF34C759)
+              ? AppColors.switchGreen
               : p.isDark
                   ? Colors.white.withValues(alpha: 0.3)
                   : Colors.black.withValues(alpha: 0.15),

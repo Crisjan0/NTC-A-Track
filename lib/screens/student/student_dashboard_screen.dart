@@ -204,7 +204,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                             label: 'Total Days',
                             value: '$_total',
                             icon: Icons.calendar_month_rounded,
-                            gradient: AppGradients.warning,
+                            gradient: AppGradients.orange,
                           ),
                         ),
                         const SizedBox(width: 12),

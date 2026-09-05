@@ -115,8 +115,8 @@ class StudentCard extends StatelessWidget {
                       label: 'Edit',
                       onTap: onEdit,
                       color: p.isDark
-                          ? const Color(0xFFFBBF24)
-                          : const Color(0xFFB45309),
+                          ? AppColors.warningBright
+                          : AppColors.warningDark,
                     ),
                     const Spacer(),
                     IconButton(

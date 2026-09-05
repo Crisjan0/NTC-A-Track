@@ -87,23 +87,29 @@ class AttendanceCard extends StatelessWidget {
                     Icon(Icons.schedule_rounded,
                         size: 14, color: p.textSecondary),
                     const SizedBox(width: 4),
-                    Text(
-                      Formatters.time(record.time),
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: p.textSecondary,
+                    Flexible(
+                      child: Text(
+                        Formatters.time(record.time),
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: p.textSecondary,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Icon(Icons.badge_rounded, size: 14, color: p.textSecondary),
                     const SizedBox(width: 4),
-                    Text(
-                      record.studentId,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: p.textSecondary,
+                    Flexible(
+                      child: Text(
+                        record.studentId,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: p.textSecondary,
+                        ),
                       ),
                     ),
                   ],

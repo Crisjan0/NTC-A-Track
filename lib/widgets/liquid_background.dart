@@ -26,14 +26,17 @@ class LiquidBackground extends StatefulWidget {
 
 class _LiquidBackgroundState extends State<LiquidBackground>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(seconds: 40),
-  );
+  late final AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
+    // Created eagerly in initState (never lazily) so dispose() never touches
+    // an uninitialized controller on a deactivated element.
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 40),
+    );
     if (widget.animated) {
       _controller.repeat();
     }

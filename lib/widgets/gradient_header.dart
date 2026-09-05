@@ -44,8 +44,8 @@ class GradientHeader extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  AppColors.primary.withValues(alpha: p.isDark ? 0.72 : 0.82),
-                  AppColors.violet.withValues(alpha: p.isDark ? 0.66 : 0.78),
+                  AppColors.primary.withValues(alpha: p.isDark ? 0.75 : 0.85),
+                  AppColors.primaryDark.withValues(alpha: p.isDark ? 0.6 : 0.7),
                 ],
               ),
             ),

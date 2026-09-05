@@ -311,7 +311,7 @@ class _EventRow extends StatelessWidget {
                     Icons.radio_button_checked_rounded,
                     size: 13,
                     color: p.isDark
-                        ? const Color(0xFF34D399)
+                        ? AppColors.successBright
                         : AppColors.success,
                   ),
                   const SizedBox(width: 4),
@@ -321,9 +321,9 @@ class _EventRow extends StatelessWidget {
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.5,
-                      color: p.isDark
-                          ? const Color(0xFF34D399)
-                          : AppColors.success,
+                    color: p.isDark
+                        ? AppColors.successBright
+                        : AppColors.success,
                     ),
                   ),
                 ],

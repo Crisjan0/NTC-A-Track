@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../models/event_model.dart';
 import '../../services/attendance_service.dart';
+import '../../utils/app_theme.dart';
 import '../../utils/constants.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/glass_panel.dart';
+import '../../widgets/glass_scaffold.dart';
 import '../../widgets/gradient_header.dart';
 
 /// Admin event management: create events, set which one is active, and
@@ -133,7 +136,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
   Widget build(BuildContext context) {
     final active = _events.where((e) => e.isActive).toList();
 
-    return Scaffold(
+    return GlassScaffold(
       body: Column(
         children: [
           GradientHeader(
@@ -165,10 +168,10 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
               'Tap "Set Active" on an event to switch attendance to it. '
               'The active event cannot be deleted.',
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 height: 1.4,
-                color: AppColors.textSecondary,
+                color: AppTheme.paletteOf(context).textSecondary,
               ),
             ),
           ),
@@ -224,13 +227,11 @@ class _EventRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final p = AppTheme.paletteOf(context);
+    return GlassPanel(
+      radius: 16,
+      blur: 18,
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
       child: Row(
         children: [
           Container(
@@ -238,8 +239,17 @@ class _EventRow extends StatelessWidget {
             height: 44,
             decoration: BoxDecoration(
               gradient: event.isActive ? AppGradients.primary : null,
-              color: event.isActive ? null : AppColors.indigoLight,
+              color: event.isActive ? null : p.primaryContainer,
               shape: BoxShape.circle,
+              boxShadow: event.isActive
+                  ? [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 3),
+                      ),
+                    ]
+                  : null,
             ),
             child: Icon(
               event.isActive
@@ -256,19 +266,19 @@ class _EventRow extends StatelessWidget {
               children: [
                 Text(
                   event.name,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+                    color: p.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   '${recordCount == 0 ? 'No records yet' : '$recordCount ${recordCount == 1 ? 'student' : 'students'}'} · '
                   '${event.usesTimeInOut ? 'AM/PM In & Out' : 'One-time'}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: AppColors.textSecondary,
+                    color: p.textSecondary,
                   ),
                 ),
               ],
@@ -278,35 +288,42 @@ class _EventRow extends StatelessWidget {
             onPressed: onEdit,
             tooltip: 'Edit event',
             visualDensity: VisualDensity.compact,
-            icon: const Icon(
+            icon: Icon(
               Icons.edit_outlined,
               size: 20,
-              color: AppColors.textSecondary,
+              color: p.textSecondary,
             ),
           ),
           if (event.isActive)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
-                color: AppColors.successLight,
+                color: AppColors.success.withValues(alpha: p.isDark ? 0.18 : 0.12),
                 borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: AppColors.success.withValues(alpha: 0.3),
+                ),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
                     Icons.radio_button_checked_rounded,
                     size: 13,
-                    color: AppColors.success,
+                    color: p.isDark
+                        ? const Color(0xFF34D399)
+                        : AppColors.success,
                   ),
-                  SizedBox(width: 4),
+                  const SizedBox(width: 4),
                   Text(
                     'ACTIVE',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.5,
-                      color: AppColors.success,
+                      color: p.isDark
+                          ? const Color(0xFF34D399)
+                          : AppColors.success,
                     ),
                   ),
                 ],
@@ -366,8 +383,14 @@ class _FlowOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = AppTheme.paletteOf(context);
+    final scheme = Theme.of(context).colorScheme;
     return Material(
-      color: selected ? AppColors.indigoLight : AppColors.surface,
+      color: selected
+          ? p.primaryContainer
+          : p.isDark
+              ? Colors.white.withValues(alpha: 0.06)
+              : Colors.white.withValues(alpha: 0.5),
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -378,7 +401,11 @@ class _FlowOption extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: selected ? AppColors.primary : AppColors.border,
+              color: selected
+                  ? scheme.primary
+                  : p.isDark
+                      ? Colors.white.withValues(alpha: 0.2)
+                      : Colors.white.withValues(alpha: 0.9),
               width: selected ? 1.5 : 1,
             ),
           ),
@@ -386,9 +413,7 @@ class _FlowOption extends StatelessWidget {
             children: [
               Icon(
                 icon,
-                color: selected
-                    ? AppColors.primary
-                    : AppColors.textSecondary,
+                color: selected ? scheme.primary : p.textSecondary,
                 size: 20,
               ),
               const SizedBox(width: 10),
@@ -398,18 +423,18 @@ class _FlowOption extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: p.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 1),
                     Text(
                       subtitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
-                        color: AppColors.textSecondary,
+                        color: p.textSecondary,
                       ),
                     ),
                   ],
@@ -419,8 +444,7 @@ class _FlowOption extends StatelessWidget {
                 selected
                     ? Icons.radio_button_checked_rounded
                     : Icons.radio_button_off_rounded,
-                color:
-                    selected ? AppColors.primary : AppColors.border,
+                color: selected ? scheme.primary : p.borderStroke,
                 size: 20,
               ),
             ],
@@ -486,12 +510,12 @@ class _EventDialogState extends State<_EventDialog> {
             ),
           ),
           const SizedBox(height: 18),
-          const Text(
+          Text(
             'Attendance Flow',
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+              color: AppTheme.paletteOf(context).textPrimary,
             ),
           ),
           const SizedBox(height: 8),

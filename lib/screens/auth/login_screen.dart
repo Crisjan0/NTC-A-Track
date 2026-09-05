@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../services/auth_service.dart';
+import '../../utils/app_theme.dart';
 import '../../utils/constants.dart';
 import '../../utils/validators.dart';
 import '../../widgets/custom_button.dart';
+import '../../widgets/glass_panel.dart';
+import '../../widgets/glass_scaffold.dart';
 import '../admin/admin_shell.dart';
 import '../student/student_shell.dart';
 import 'role_selection_screen.dart';
@@ -72,88 +75,125 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final p = AppTheme.paletteOf(context);
+
+    return GlassScaffold(
+      animated: true,
       body: SingleChildScrollView(
         child: Column(
           children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(24, 56, 24, 36),
-              decoration: const BoxDecoration(
-                gradient: AppGradients.primaryDeep,
-                borderRadius: BorderRadius.vertical(
-                  bottom: Radius.circular(32),
-                ),
-              ),
-              child: SafeArea(
-                bottom: false,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    IconButton(
-                      onPressed: () => Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(
-                          builder: (_) => const RoleSelectionScreen(),
-                        ),
-                      ),
-                      icon: const Icon(
-                        Icons.arrow_back_rounded,
-                        color: Colors.white,
-                      ),
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.white.withValues(alpha: 0.15),
+            // Floating gradient glass header with the back action.
+            SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                child: GlassPanel(
+                  radius: 26,
+                  blur: 30,
+                  strong: true,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppColors.primary
+                              .withValues(alpha: p.isDark ? 0.72 : 0.82),
+                          AppColors.violet
+                              .withValues(alpha: p.isDark ? 0.66 : 0.78),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Icon(
-                            _isAdmin
-                                ? Icons.admin_panel_settings_rounded
-                                : Icons.school_rounded,
-                            color: Colors.white,
-                            size: 30,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${_isAdmin ? 'Admin' : 'Student'} Login',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.4,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 14, 14, 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          IconButton(
+                            onPressed: () =>
+                                Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(
+                                builder: (_) => const RoleSelectionScreen(),
                               ),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              _isAdmin
-                                  ? 'Sign in to manage the system'
-                                  : 'Sign in with your Student ID',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.85),
-                                fontSize: 13,
-                              ),
+                            icon: const Icon(
+                              Icons.arrow_back_rounded,
+                              color: Colors.white,
                             ),
-                          ],
-                        ),
-                      ],
+                            style: IconButton.styleFrom(
+                              backgroundColor:
+                                  Colors.white.withValues(alpha: 0.18),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: Colors.white
+                                        .withValues(alpha: 0.25),
+                                  ),
+                                ),
+                                child: Icon(
+                                  _isAdmin
+                                      ? Icons.admin_panel_settings_rounded
+                                      : Icons.school_rounded,
+                                  color: Colors.white,
+                                  size: 30,
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${_isAdmin ? 'Admin' : 'Student'} Login',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: -0.4,
+                                        shadows: [
+                                          Shadow(
+                                            color: Colors.black26,
+                                            blurRadius: 10,
+                                            offset: Offset(0, 1),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      _isAdmin
+                                          ? 'Sign in to manage the system'
+                                          : 'Sign in with your Student ID',
+                                      style: TextStyle(
+                                        color: Colors.white
+                                            .withValues(alpha: 0.9),
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
+              padding: const EdgeInsets.fromLTRB(24, 26, 24, 32),
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -161,9 +201,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     TextFormField(
                       controller: _identifierController,
-                      keyboardType: _isAdmin
-                          ? TextInputType.text
-                          : TextInputType.text,
                       textInputAction: TextInputAction.next,
                       autofillHints: _isAdmin
                           ? const [AutofillHints.username]
@@ -205,18 +242,18 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     if (_error != null) ...[
                       const SizedBox(height: 16),
-                      Container(
-                        width: double.infinity,
+                      GlassPanel(
+                        radius: 14,
+                        blur: 14,
+                        borderWidth: 0.8,
+                        showSheen: false,
+                        fill: AppColors.danger,
                         padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.dangerLight,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
                         child: Row(
                           children: [
                             const Icon(
                               Icons.error_outline_rounded,
-                              color: AppColors.danger,
+                              color: Colors.white,
                               size: 20,
                             ),
                             const SizedBox(width: 8),
@@ -226,7 +263,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
-                                  color: AppColors.danger,
+                                  color: Colors.white,
                                 ),
                               ),
                             ),
@@ -261,34 +298,31 @@ class _DemoHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = AppTheme.paletteOf(context);
+    final scheme = Theme.of(context).colorScheme;
     final isAdmin = role == 'admin';
-    return Container(
-      width: double.infinity,
+    return GlassPanel(
+      radius: 16,
+      blur: 18,
+      borderWidth: 0.8,
+      showSheen: false,
+      fill: p.isDark
+          ? Colors.white.withValues(alpha: 0.09)
+          : Colors.white.withValues(alpha: 0.5),
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.indigoLight,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: AppColors.primary.withValues(alpha: 0.15),
-        ),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.info_outline_rounded,
-                size: 16,
-                color: AppColors.primary,
-              ),
+              Icon(Icons.info_outline_rounded, size: 16, color: scheme.primary),
               const SizedBox(width: 6),
-              const Text(
+              Text(
                 'Demo credentials',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.primary,
+                  color: scheme.primary,
                 ),
               ),
             ],
@@ -298,11 +332,11 @@ class _DemoHint extends StatelessWidget {
             isAdmin
                 ? 'Username: ${DemoCredentials.adminUsername}\nPassword: ${DemoCredentials.adminPassword}'
                 : 'Student ID: 2026-0001\nPassword: ${DemoCredentials.studentPassword}\n(Other seeded IDs: 2026-0002 … 2026-0005)',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               height: 1.5,
               fontWeight: FontWeight.w500,
-              color: AppColors.textPrimary,
+              color: p.textPrimary,
             ),
           ),
         ],

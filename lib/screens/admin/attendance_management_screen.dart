@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import '../../models/attendance_model.dart';
 import '../../models/event_model.dart';
 import '../../services/attendance_service.dart';
+import '../../utils/app_theme.dart';
 import '../../utils/constants.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/attendance_card.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/glass_panel.dart';
 import '../../widgets/gradient_header.dart';
 import 'event_attendance_browse_screen.dart';
 
@@ -104,13 +106,17 @@ class _AttendanceManagementScreenState
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             child: Column(
               children: [
-                Material(
-                  color: AppColors.indigoLight,
-                  borderRadius: BorderRadius.circular(14),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: _openBrowse,
-                    child: Padding(
+                Builder(
+                  builder: (context) {
+                    final p = AppTheme.paletteOf(context);
+                    final scheme = Theme.of(context).colorScheme;
+                    return GlassPanel(
+                      radius: 14,
+                      blur: 16,
+                      borderWidth: 0.8,
+                      showSheen: false,
+                      color: scheme.primary,
+                      onTap: _openBrowse,
                       padding: const EdgeInsets.all(14),
                       child: Row(
                         children: [
@@ -127,7 +133,7 @@ class _AttendanceManagementScreenState
                             ),
                           ),
                           const SizedBox(width: 12),
-                          const Expanded(
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -136,28 +142,28 @@ class _AttendanceManagementScreenState
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w800,
-                                    color: AppColors.textPrimary,
+                                    color: p.textPrimary,
                                   ),
                                 ),
-                                SizedBox(height: 2),
+                                const SizedBox(height: 2),
                                 Text(
                                   'Event → Course → Student records',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: AppColors.textSecondary,
+                                    color: p.textSecondary,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const Icon(
+                          Icon(
                             Icons.chevron_right_rounded,
-                            color: AppColors.primary,
+                            color: scheme.primary,
                           ),
                         ],
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -348,10 +354,10 @@ class _AttendanceManagementScreenState
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
               child: Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
+                  color: AppTheme.paletteOf(ctx).textPrimary,
                 ),
               ),
             ),
@@ -397,13 +403,24 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = AppTheme.paletteOf(context);
+    final scheme = Theme.of(context).colorScheme;
+    final fg = active ? scheme.primary : p.textSecondary;
+    final bg = active
+        ? p.primaryContainer
+        : p.isDark
+            ? Colors.white.withValues(alpha: 0.08)
+            : Colors.white.withValues(alpha: 0.55);
+    final border = active
+        ? scheme.primary.withValues(alpha: 0.5)
+        : p.isDark
+            ? Colors.white.withValues(alpha: 0.22)
+            : Colors.white.withValues(alpha: 0.9);
     return Container(
       decoration: BoxDecoration(
-        color: active ? AppColors.indigoLight : AppColors.surface,
+        color: bg,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: active ? AppColors.primary.withValues(alpha: 0.4) : AppColors.border,
-        ),
+        border: Border.all(color: border),
       ),
       child: InkWell(
         onTap: onTap,
@@ -413,29 +430,21 @@ class _FilterChip extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                icon,
-                size: 16,
-                color: active ? AppColors.primary : AppColors.textSecondary,
-              ),
+              Icon(icon, size: 16, color: fg),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: active ? AppColors.primary : AppColors.textSecondary,
+                  color: fg,
                 ),
               ),
               if (onClear != null) ...[
                 const SizedBox(width: 6),
                 GestureDetector(
                   onTap: onClear,
-                  child: Icon(
-                    Icons.close_rounded,
-                    size: 15,
-                    color: active ? AppColors.primary : AppColors.textSecondary,
-                  ),
+                  child: Icon(Icons.close_rounded, size: 15, color: fg),
                 ),
               ],
             ],

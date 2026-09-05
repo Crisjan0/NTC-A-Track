@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import '../../models/attendance_model.dart';
 import '../../models/event_model.dart';
 import '../../services/attendance_service.dart';
+import '../../utils/app_theme.dart';
 import '../../utils/constants.dart';
 import '../../widgets/attendance_card.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/glass_panel.dart';
+import '../../widgets/glass_scaffold.dart';
 import '../../widgets/gradient_header.dart';
 
 /// Drill-down browse of attendance records, organized as:
@@ -115,7 +118,7 @@ class _EventAttendanceBrowseScreenState
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _goBack();
       },
-      child: Scaffold(
+      child: GlassScaffold(
         body: Column(
           children: [
             GradientHeader(
@@ -266,29 +269,24 @@ class _BrowseTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border),
+    final p = AppTheme.paletteOf(context);
+    final scheme = Theme.of(context).colorScheme;
+    return GlassPanel(
+      radius: 16,
+      blur: 18,
+      onTap: onTap,
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: p.primaryContainer,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: scheme.primary, size: 22),
           ),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: AppColors.indigoLight,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: AppColors.primary, size: 22),
-              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -296,18 +294,18 @@ class _BrowseTile extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: p.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.textSecondary,
+                        color: p.textSecondary,
                       ),
                     ),
                   ],
@@ -317,14 +315,12 @@ class _BrowseTile extends StatelessWidget {
                 trailing!,
                 const SizedBox(width: 4),
               ],
-              const Icon(
+              Icon(
                 Icons.chevron_right_rounded,
-                color: AppColors.textSecondary,
+                color: p.textSecondary,
               ),
             ],
           ),
-        ),
-      ),
     );
   }
 }
@@ -334,19 +330,23 @@ class _ActiveBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = AppTheme.paletteOf(context);
+    final color =
+        p.isDark ? const Color(0xFF34D399) : AppColors.success;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.successLight,
+        color: color.withValues(alpha: p.isDark ? 0.18 : 0.12),
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
-      child: const Text(
+      child: Text(
         'ACTIVE',
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w800,
           letterSpacing: 0.5,
-          color: AppColors.success,
+          color: color,
         ),
       ),
     );

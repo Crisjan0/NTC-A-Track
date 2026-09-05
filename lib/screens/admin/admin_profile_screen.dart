@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../services/auth_service.dart';
 import '../../services/session_service.dart';
+import '../../utils/app_theme.dart';
 import '../../utils/constants.dart';
+import '../../widgets/glass_panel.dart';
 import '../../widgets/gradient_header.dart';
 import '../auth/role_selection_screen.dart';
 
@@ -21,6 +23,7 @@ class AdminProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = AppTheme.paletteOf(context);
     final session = SessionService.instance.current;
     final username = session?.username ?? 'admin';
 
@@ -37,13 +40,11 @@ class AdminProfileScreen extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  Container(
+                  GlassPanel(
+                    radius: kCardRadius,
+                    blur: 26,
+                    strong: true,
                     padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(kCardRadius),
-                      border: Border.all(color: AppColors.border),
-                    ),
                     child: Column(
                       children: [
                         Container(
@@ -51,6 +52,13 @@ class AdminProfileScreen extends StatelessWidget {
                           decoration: const BoxDecoration(
                             gradient: AppGradients.primary,
                             shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Color(0x554F46E5),
+                                blurRadius: 18,
+                                offset: Offset(0, 6),
+                              ),
+                            ],
                           ),
                           child: const Icon(
                             Icons.admin_panel_settings_rounded,
@@ -61,21 +69,26 @@ class AdminProfileScreen extends StatelessWidget {
                         const SizedBox(height: 14),
                         Text(
                           'Administrator',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
-                            color: AppColors.textPrimary,
+                            color: p.textPrimary,
                           ),
                         ),
                         const SizedBox(height: 4),
-                        const Text(
+                        Text(
                           'Full system access',
                           style: TextStyle(
                             fontSize: 13,
-                            color: AppColors.textSecondary,
+                            color: p.textSecondary,
                           ),
                         ),
-                        const Divider(height: 32),
+                        Divider(
+                          height: 32,
+                          color: p.isDark
+                              ? Colors.white.withValues(alpha: 0.1)
+                              : Colors.black.withValues(alpha: 0.06),
+                        ),
                         _ProfileRow(
                           icon: Icons.person_outline_rounded,
                           label: 'Username',
@@ -107,8 +120,11 @@ class AdminProfileScreen extends StatelessWidget {
                       onPressed: () => _logout(context),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.danger,
-                        side: const BorderSide(color: AppColors.dangerLight),
-                        backgroundColor: AppColors.dangerLight,
+                        side: BorderSide(
+                          color: AppColors.danger.withValues(alpha: 0.35),
+                        ),
+                        backgroundColor:
+                            AppColors.danger.withValues(alpha: 0.1),
                       ),
                       icon: const Icon(Icons.logout_rounded),
                       label: const Text('Logout'),
@@ -137,6 +153,7 @@ class _ProfileRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = AppTheme.paletteOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -145,18 +162,18 @@ class _ProfileRow extends StatelessWidget {
           const SizedBox(width: 12),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
-              color: AppColors.textSecondary,
+              color: p.textSecondary,
             ),
           ),
           const Spacer(),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+              color: p.textPrimary,
             ),
           ),
         ],

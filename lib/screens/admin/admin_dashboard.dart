@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 import '../../models/attendance_model.dart';
 import '../../services/attendance_service.dart';
 import '../../services/session_service.dart';
+import '../../utils/app_theme.dart';
 import '../../utils/constants.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/attendance_card.dart';
 import '../../widgets/dashboard_card.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/glass_panel.dart';
 import '../../widgets/gradient_header.dart';
 import '../../widgets/section_title.dart';
 import 'admin_shell.dart';
@@ -339,40 +341,39 @@ class _QuickAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  gradient: gradient,
-                  borderRadius: BorderRadius.circular(12),
+    final p = AppTheme.paletteOf(context);
+    return GlassPanel(
+      radius: 16,
+      blur: 18,
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              gradient: gradient,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.2),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
                 ),
-                child: Icon(icon, color: Colors.white, size: 22),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ],
+              ],
+            ),
+            child: Icon(icon, color: Colors.white, size: 22),
           ),
-        ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: p.textPrimary,
+            ),
+          ),
+        ],
       ),
     );
   }

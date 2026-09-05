@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../utils/constants.dart';
+import '../utils/app_theme.dart';
+import 'glass_panel.dart';
 
 /// Shown when a list or view has no data.
 class EmptyState extends StatelessWidget {
@@ -17,28 +18,29 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = AppTheme.paletteOf(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.indigoLight,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 40, color: AppColors.primary),
+            GlassIconTile(
+              icon: icon,
+              size: 76,
+              radius: 38,
+              iconSize: 38,
+              color: Theme.of(context).colorScheme.primary,
+              iconColor: Colors.white,
             ),
             const SizedBox(height: 16),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+                color: p.textPrimary,
               ),
             ),
             if (subtitle != null) ...[
@@ -46,9 +48,9 @@ class EmptyState extends StatelessWidget {
               Text(
                 subtitle!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
-                  color: AppColors.textSecondary,
+                  color: p.textSecondary,
                 ),
               ),
             ],

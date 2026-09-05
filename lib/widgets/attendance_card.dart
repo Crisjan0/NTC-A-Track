@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../models/attendance_model.dart';
+import '../utils/app_theme.dart';
 import '../utils/constants.dart';
 import '../utils/formatters.dart';
+import 'glass_panel.dart';
 import 'status_chip.dart';
 
-/// A single attendance record row.
+/// A frosted glass row showing a single attendance record.
 class AttendanceCard extends StatelessWidget {
   final Attendance record;
   final bool showStudent;
@@ -18,37 +20,37 @@ class AttendanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final p = AppTheme.paletteOf(context);
+    final scheme = Theme.of(context).colorScheme;
+
+    return GlassPanel(
+      radius: 18,
+      blur: 22,
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: AppColors.indigoLight,
+              color: p.primaryContainer,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
               children: [
                 Text(
                   '${record.date.day}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.primary,
+                    color: p.isDark ? p.onPrimaryContainer : AppColors.primary,
                   ),
                 ),
                 Text(
                   _monthAbbr(record.date),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
+                    color: p.isDark ? p.onPrimaryContainer : AppColors.primary,
                   ),
                 ),
               ],
@@ -62,10 +64,10 @@ class AttendanceCard extends StatelessWidget {
                 if (showStudent && record.studentName != null) ...[
                   Text(
                     record.studentName!,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+                      color: p.textPrimary,
                     ),
                   ),
                   if (record.course != null || record.yearLevel != null)
@@ -73,42 +75,35 @@ class AttendanceCard extends StatelessWidget {
                       [record.course, record.yearLevel]
                           .whereType<String>()
                           .join(' · '),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
-                        color: AppColors.textSecondary,
+                        color: p.textSecondary,
                       ),
                     ),
                   const SizedBox(height: 6),
                 ],
                 Row(
                   children: [
-                    const Icon(
-                      Icons.schedule_rounded,
-                      size: 14,
-                      color: AppColors.textSecondary,
-                    ),
+                    Icon(Icons.schedule_rounded,
+                        size: 14, color: p.textSecondary),
                     const SizedBox(width: 4),
                     Text(
                       Formatters.time(record.time),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary,
+                        color: p.textSecondary,
                       ),
                     ),
                     const SizedBox(width: 10),
-                    const Icon(
-                      Icons.badge_rounded,
-                      size: 14,
-                      color: AppColors.textSecondary,
-                    ),
+                    Icon(Icons.badge_rounded, size: 14, color: p.textSecondary),
                     const SizedBox(width: 4),
                     Text(
                       record.studentId,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary,
+                        color: p.textSecondary,
                       ),
                     ),
                   ],
@@ -118,20 +113,17 @@ class AttendanceCard extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 6),
                     child: Row(
                       children: [
-                        const Icon(
-                          Icons.emoji_events_rounded,
-                          size: 13,
-                          color: AppColors.primary,
-                        ),
+                        Icon(Icons.emoji_events_rounded,
+                            size: 13, color: scheme.primary),
                         const SizedBox(width: 4),
                         Flexible(
                           child: Text(
                             record.eventName!,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.primary,
+                              color: scheme.primary,
                             ),
                           ),
                         ),
@@ -166,9 +158,11 @@ class _CheckChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = AppTheme.paletteOf(context);
     final isIn = checkType.endsWith('_IN');
-    final color = isIn ? AppColors.info : AppColors.warning;
-    final bg = isIn ? AppColors.infoLight : AppColors.warningLight;
+    final base = isIn ? AppColors.info : AppColors.warning;
+    final color = p.isDark ? Color.lerp(base, Colors.white, 0.3)! : base;
+    final bg = base.withValues(alpha: p.isDark ? 0.18 : 0.12);
     final icon = isIn ? Icons.login_rounded : Icons.logout_rounded;
 
     return Container(
@@ -176,6 +170,7 @@ class _CheckChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: base.withValues(alpha: 0.25)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

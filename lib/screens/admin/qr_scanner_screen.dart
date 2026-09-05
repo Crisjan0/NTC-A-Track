@@ -6,9 +6,11 @@ import '../../models/event_model.dart';
 import '../../models/student_model.dart';
 import '../../services/attendance_service.dart';
 import '../../services/session_service.dart';
+import '../../utils/app_theme.dart';
 import '../../utils/constants.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/custom_button.dart';
+import '../../widgets/glass_panel.dart';
 import '../../widgets/gradient_header.dart';
 import '../auth/role_selection_screen.dart';
 import 'event_management_screen.dart';
@@ -694,7 +696,10 @@ class _OutcomeDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The scanner is a full-screen camera, so the result sheet keeps a
+    // light frosted surface in both appearances for contrast.
     return Dialog(
+      backgroundColor: Colors.white.withValues(alpha: 0.96),
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -755,14 +760,15 @@ class _StudentSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final event = eventName;
-    return Container(
-      width: double.infinity,
+    final p = AppTheme.paletteOf(context);
+    return GlassPanel(
+      radius: 14,
+      blur: 18,
+      showSheen: false,
+      fill: p.isDark
+          ? Colors.white.withValues(alpha: 0.06)
+          : Colors.white.withValues(alpha: 0.5),
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-      ),
       child: Column(
         children: [
           _SummaryRow(label: 'Student ID', value: student.studentId),
@@ -926,6 +932,7 @@ class _QrScanLandingPageState extends State<QrScanLandingPage> {
 
   @override
   Widget build(BuildContext context) {
+    final p = AppTheme.paletteOf(context);
     return Scaffold(
       body: Column(
         children: [
@@ -946,13 +953,11 @@ class _QrScanLandingPageState extends State<QrScanLandingPage> {
                     onManage: _openEventManagement,
                   ),
                   const SizedBox(height: 16),
-                  Container(
+                  GlassPanel(
+                    radius: kCardRadius,
+                    blur: 26,
+                    strong: true,
                     padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(kCardRadius),
-                      border: Border.all(color: AppColors.border),
-                    ),
                     child: Column(
                       children: [
                         Container(
@@ -975,12 +980,12 @@ class _QrScanLandingPageState extends State<QrScanLandingPage> {
                           ),
                         ),
                         const SizedBox(height: 18),
-                        const Text(
+                        Text(
                           'Ready to scan?',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
-                            color: AppColors.textPrimary,
+                            color: p.textPrimary,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -998,7 +1003,7 @@ class _QrScanLandingPageState extends State<QrScanLandingPage> {
                           style: TextStyle(
                             fontSize: 13,
                             height: 1.5,
-                            color: AppColors.textSecondary,
+                            color: p.textSecondary,
                           ),
                         ),
                         const SizedBox(height: 24),
@@ -1017,7 +1022,7 @@ class _QrScanLandingPageState extends State<QrScanLandingPage> {
                           icon: const Icon(Icons.keyboard_alt_outlined),
                           label: const Text('Enter ID Manually'),
                           style: TextButton.styleFrom(
-                            foregroundColor: AppColors.textSecondary,
+                            foregroundColor: p.textSecondary,
                           ),
                         ),
                       ],
@@ -1145,43 +1150,41 @@ class _StepRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
+    final p = AppTheme.paletteOf(context);
+    final scheme = Theme.of(context).colorScheme;
+    return GlassPanel(
+      radius: 16,
+      blur: 18,
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
       child: Row(
         children: [
           Container(
             width: 30,
             height: 30,
-            decoration: const BoxDecoration(
-              color: AppColors.indigoLight,
+            decoration: BoxDecoration(
+              color: p.primaryContainer,
               shape: BoxShape.circle,
             ),
             alignment: Alignment.center,
             child: Text(
               number,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w800,
-                color: AppColors.primary,
+                color: scheme.primary,
               ),
             ),
           ),
           const SizedBox(width: 12),
-          Icon(icon, size: 20, color: AppColors.primary),
+          Icon(icon, size: 20, color: scheme.primary),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
+                color: p.textPrimary,
               ),
             ),
           ),

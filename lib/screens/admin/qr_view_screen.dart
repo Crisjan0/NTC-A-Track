@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/student_model.dart';
 import '../../widgets/custom_button.dart';
+import '../../widgets/glass_scaffold.dart';
 import '../../widgets/gradient_header.dart';
 import '../../widgets/qr_display_card.dart';
 import 'edit_student_screen.dart';
@@ -14,7 +15,7 @@ class QrViewScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GlassScaffold(
       body: Column(
         children: [
           GradientHeader(

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../utils/app_theme.dart';
 import '../utils/constants.dart';
 
-/// Colored pill showing PRESENT / ABSENT status.
+/// Colored translucent pill showing PRESENT / ABSENT status.
 class StatusChip extends StatelessWidget {
   final String status;
 
@@ -10,9 +11,13 @@ class StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = AppTheme.paletteOf(context);
     final isPresent = status.toUpperCase() == AttendanceStatus.present;
-    final color = isPresent ? AppColors.success : AppColors.danger;
-    final bg = isPresent ? AppColors.successLight : AppColors.dangerLight;
+    final base = isPresent ? AppColors.success : AppColors.danger;
+    final color = p.isDark
+        ? Color.lerp(base, Colors.white, 0.3)!
+        : base;
+    final bg = base.withValues(alpha: p.isDark ? 0.18 : 0.12);
     final icon = isPresent ? Icons.check_circle_rounded : Icons.cancel_rounded;
 
     return Container(
@@ -20,6 +25,7 @@ class StatusChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: base.withValues(alpha: 0.25)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

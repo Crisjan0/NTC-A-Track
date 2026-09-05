@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../utils/constants.dart';
 
-/// A full-width gradient button with an optional loading spinner.
+/// A full-width glossy gradient button with an optional loading spinner and a
+/// soft specular highlight on top — the liquid-glass take on a primary action.
 class CustomButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -24,7 +25,7 @@ class CustomButton extends StatelessWidget {
     final enabled = onPressed != null && !loading;
     return SizedBox(
       width: double.infinity,
-      height: 52,
+      height: 54,
       child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: gradient ?? AppGradients.primary,
@@ -32,47 +33,68 @@ class CustomButton extends StatelessWidget {
           boxShadow: enabled
               ? [
                   BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+                    color: AppColors.primary.withValues(alpha: 0.35),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
                   ),
                 ]
               : null,
         ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(kButtonRadius),
-            onTap: enabled ? onPressed : null,
-            child: Center(
-              child: loading
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (icon != null) ...[
-                          Icon(icon, color: Colors.white, size: 20),
-                          const SizedBox(width: 8),
-                        ],
-                        Text(
-                          label,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.2,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(kButtonRadius),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Specular highlight sweeping across the top of the button.
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.white38,
+                      Colors.transparent,
+                    ],
+                    stops: [0.0, 0.45],
+                  ),
+                ),
+              ),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: enabled ? onPressed : null,
+                  child: Center(
+                    child: loading
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (icon != null) ...[
+                                Icon(icon, color: Colors.white, size: 20),
+                                const SizedBox(width: 8),
+                              ],
+                              Text(
+                                label,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
-            ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

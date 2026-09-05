@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/student_model.dart';
+import '../utils/app_theme.dart';
 import '../utils/constants.dart';
 import '../utils/validators.dart';
 
@@ -185,13 +186,13 @@ class StudentFormState extends State<StudentForm> {
           ],
           const SizedBox(height: 4),
           if (widget.student != null)
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
               child: Text(
                 'Leave password blank to keep the current one.',
                 style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.textSecondary,
+                  color: AppTheme.paletteOf(context).textSecondary,
                 ),
               ),
             ),

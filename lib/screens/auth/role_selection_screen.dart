@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../utils/app_theme.dart';
 import '../../utils/constants.dart';
+import '../../widgets/glass_panel.dart';
+import '../../widgets/glass_scaffold.dart';
 import 'login_screen.dart';
 
 /// Lets the user pick which role they are logging in as.
@@ -9,23 +12,23 @@ class RoleSelectionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [AppColors.primaryDark, AppColors.violet],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              const Spacer(flex: 2),
-              Container(
+    final p = AppTheme.paletteOf(context);
+
+    return GlassScaffold(
+      animated: true,
+      body: SafeArea(
+        child: Column(
+          children: [
+            const Spacer(flex: 2),
+            GlassPanel(
+              radius: 26,
+              blur: 26,
+              strong: true,
+              showSheen: true,
+              child: Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.16),
+                  gradient: AppGradients.primary,
                   borderRadius: BorderRadius.circular(22),
                 ),
                 child: const Icon(
@@ -34,68 +37,68 @@ class RoleSelectionScreen extends StatelessWidget {
                   color: Colors.white,
                 ),
               ),
-              const SizedBox(height: 20),
-              const Text(
-                'Attendance System',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
-                ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Attendance System',
+              style: TextStyle(
+                color: p.textPrimary,
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
               ),
-              const SizedBox(height: 6),
-              Text(
-                'QR Code-Based Student Attendance',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.85),
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'QR Code-Based Student Attendance',
+              style: TextStyle(
+                color: p.textSecondary,
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
               ),
-              const Spacer(flex: 2),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  children: [
-                    Text(
-                      'Who is signing in?',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.2,
-                      ),
+            ),
+            const Spacer(flex: 2),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                children: [
+                  Text(
+                    'Who is signing in?',
+                    style: TextStyle(
+                      color: p.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.4,
                     ),
-                    const SizedBox(height: 16),
-                    _RoleCard(
-                      icon: Icons.admin_panel_settings_rounded,
-                      title: 'Admin',
-                      subtitle: 'Manage students, scan QR codes\nand view attendance records',
-                      onTap: () => _go(context, 'admin'),
-                    ),
-                    const SizedBox(height: 14),
-                    _RoleCard(
-                      icon: Icons.person_rounded,
-                      title: 'Student',
-                      subtitle: 'View your QR code and\npersonal attendance history',
-                      onTap: () => _go(context, 'student'),
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 16),
+                  _RoleCard(
+                    icon: Icons.admin_panel_settings_rounded,
+                    title: 'Admin',
+                    subtitle: 'Manage students, scan QR codes\nand view attendance records',
+                    onTap: () => _go(context, 'admin'),
+                  ),
+                  const SizedBox(height: 14),
+                  _RoleCard(
+                    icon: Icons.person_rounded,
+                    title: 'Student',
+                    subtitle: 'View your QR code and\npersonal attendance history',
+                    onTap: () => _go(context, 'student'),
+                  ),
+                ],
               ),
-              const SizedBox(height: 40),
-              Text(
-                'Local demo database · No internet required',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.6),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                ),
+            ),
+            const SizedBox(height: 32),
+            Text(
+              'Local demo database · No internet required',
+              style: TextStyle(
+                color: p.textSecondary.withValues(alpha: 0.8),
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
               ),
-              const Spacer(),
-            ],
-          ),
+            ),
+            const Spacer(),
+          ],
         ),
       ),
     );
@@ -138,56 +141,60 @@ class _RoleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  gradient: AppGradients.primary,
-                  borderRadius: BorderRadius.circular(14),
+    final p = AppTheme.paletteOf(context);
+    return GlassPanel(
+      radius: 22,
+      blur: 26,
+      strong: true,
+      padding: const EdgeInsets.all(18),
+      onTap: onTap,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              gradient: AppGradients.primary,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
                 ),
-                child: Icon(icon, color: Colors.white, size: 26),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        height: 1.35,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.primary,
-              ),
-            ],
+              ],
+            ),
+            child: Icon(icon, color: Colors.white, size: 26),
           ),
-        ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: p.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.35,
+                    color: p.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Icon(
+            Icons.chevron_right_rounded,
+            color: AppColors.primary,
+          ),
+        ],
       ),
     );
   }

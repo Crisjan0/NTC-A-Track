@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../../models/student_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/session_service.dart';
+import '../../utils/app_theme.dart';
 import '../../utils/constants.dart';
 import '../../widgets/avatar.dart';
+import '../../widgets/glass_panel.dart';
 import '../../widgets/gradient_header.dart';
 import '../auth/role_selection_screen.dart';
 
@@ -44,14 +46,11 @@ class StudentProfileScreen extends StatelessWidget {
                         padding: const EdgeInsets.all(20),
                         child: Column(
                           children: [
-                            Container(
+                            GlassPanel(
+                              radius: kCardRadius,
+                              blur: 26,
+                              strong: true,
                               padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: AppColors.surface,
-                                borderRadius:
-                                    BorderRadius.circular(kCardRadius),
-                                border: Border.all(color: AppColors.border),
-                              ),
                               child: Column(
                                 children: [
                                   InitialsAvatar(
@@ -61,10 +60,11 @@ class StudentProfileScreen extends StatelessWidget {
                                   const SizedBox(height: 14),
                                   Text(
                                     student.fullName,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.w800,
-                                      color: AppColors.textPrimary,
+                                      color:
+                                          AppTheme.paletteOf(context).textPrimary,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
@@ -77,7 +77,15 @@ class StudentProfileScreen extends StatelessWidget {
                                       letterSpacing: 0.8,
                                     ),
                                   ),
-                                  const Divider(height: 32),
+                                  Divider(
+                                    height: 32,
+                                    color:
+                                        AppTheme.paletteOf(context).isDark
+                                            ? Colors.white
+                                                .withValues(alpha: 0.1)
+                                            : Colors.black
+                                                .withValues(alpha: 0.06),
+                                  ),
                                   _ProfileRow(
                                     icon: Icons.menu_book_rounded,
                                     label: 'Course',
@@ -91,7 +99,8 @@ class StudentProfileScreen extends StatelessWidget {
                                   _ProfileRow(
                                     icon: Icons.person_outline_rounded,
                                     label: 'Username',
-                                    value: session?.username ?? student.studentId,
+                                    value:
+                                        session?.username ?? student.studentId,
                                   ),
                                 ],
                               ),
@@ -104,10 +113,12 @@ class StudentProfileScreen extends StatelessWidget {
                                 onPressed: () => _logout(context),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: AppColors.danger,
-                                  side: const BorderSide(
-                                    color: AppColors.dangerLight,
+                                  side: BorderSide(
+                                    color: AppColors.danger
+                                        .withValues(alpha: 0.35),
                                   ),
-                                  backgroundColor: AppColors.dangerLight,
+                                  backgroundColor: AppColors.danger
+                                      .withValues(alpha: 0.1),
                                 ),
                                 icon: const Icon(Icons.logout_rounded),
                                 label: const Text('Logout'),
@@ -138,6 +149,7 @@ class _ProfileRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = AppTheme.paletteOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -146,9 +158,9 @@ class _ProfileRow extends StatelessWidget {
           const SizedBox(width: 12),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
-              color: AppColors.textSecondary,
+              color: p.textSecondary,
             ),
           ),
           const Spacer(),
@@ -156,10 +168,10 @@ class _ProfileRow extends StatelessWidget {
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+                color: p.textPrimary,
               ),
             ),
           ),

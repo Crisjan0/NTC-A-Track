@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../models/student_model.dart';
 import '../../services/auth_service.dart';
-import '../../utils/constants.dart';
+import '../../utils/app_theme.dart';
+import '../../widgets/glass_panel.dart';
 import '../../widgets/gradient_header.dart';
 import '../../widgets/qr_display_card.dart';
 
@@ -31,6 +32,8 @@ class _MyQrCodeScreenState extends State<MyQrCodeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final p = AppTheme.paletteOf(context);
+    final scheme = Theme.of(context).colorScheme;
     final student = _student;
     return Scaffold(
       body: Column(
@@ -49,24 +52,21 @@ class _MyQrCodeScreenState extends State<MyQrCodeScreen> {
                       children: [
                         QrDisplayCard(student: student),
                         const SizedBox(height: 20),
-                        Container(
-                          width: double.infinity,
+                        GlassPanel(
+                          radius: 16,
+                          blur: 18,
+                          borderWidth: 0.8,
+                          showSheen: false,
+                          color: scheme.primary,
                           padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: AppColors.infoLight,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: AppColors.info.withValues(alpha: 0.2),
-                            ),
-                          ),
-                          child: const Row(
+                          child: Row(
                             children: [
                               Icon(
                                 Icons.info_outline_rounded,
                                 size: 18,
-                                color: AppColors.info,
+                                color: p.isDark ? scheme.primary : scheme.primary,
                               ),
-                              SizedBox(width: 10),
+                              const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
                                   'Present this QR code to the admin '
@@ -75,7 +75,7 @@ class _MyQrCodeScreenState extends State<MyQrCodeScreen> {
                                   style: TextStyle(
                                     fontSize: 12,
                                     height: 1.45,
-                                    color: AppColors.textPrimary,
+                                    color: p.textPrimary,
                                   ),
                                 ),
                               ),

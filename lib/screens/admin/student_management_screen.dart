@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../models/student_model.dart';
 import '../../services/student_service.dart';
+import '../../utils/app_theme.dart';
 import '../../utils/constants.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/glass_panel.dart';
 import '../../widgets/gradient_header.dart';
 import '../../widgets/student_card.dart';
 import 'add_student_screen.dart';
@@ -245,37 +247,49 @@ class _FilterDropdown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final p = AppTheme.paletteOf(context);
+    return GlassPanel(
+      radius: kFieldRadius,
+      blur: 16,
+      borderWidth: 0.8,
+      showSheen: false,
+      fill: p.isDark
+          ? Colors.white.withValues(alpha: 0.06)
+          : Colors.white.withValues(alpha: 0.4),
       padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F9FC),
-        borderRadius: BorderRadius.circular(kFieldRadius),
-        border: Border.all(color: AppColors.border),
-      ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<T>(
           value: value,
           isExpanded: true,
           hint: Row(
             children: [
-              Icon(leadingIcon, size: 18, color: AppColors.textSecondary),
+              Icon(leadingIcon, size: 18, color: p.textSecondary),
               const SizedBox(width: 8),
               Flexible(
                 child: Text(
                   hint,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
-                    color: AppColors.textSecondary,
+                    color: p.textSecondary,
                   ),
                 ),
               ),
             ],
           ),
+          style: TextStyle(
+            fontSize: 13,
+            color: p.textPrimary,
+          ),
+          dropdownColor: p.glassFillStrong,
           items: [
             DropdownMenuItem<T>(
               value: null,
-              child: Text(hint, overflow: TextOverflow.ellipsis),
+              child: Text(
+                hint,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: p.textSecondary),
+              ),
             ),
             ...items.map(
               (item) => DropdownMenuItem<T>(
@@ -283,7 +297,10 @@ class _FilterDropdown<T> extends StatelessWidget {
                 child: Text(
                   '$item',
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 13),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: p.textPrimary,
+                  ),
                 ),
               ),
             ),

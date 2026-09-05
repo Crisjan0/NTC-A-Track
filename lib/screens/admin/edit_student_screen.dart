@@ -4,6 +4,8 @@ import '../../models/student_model.dart';
 import '../../services/student_service.dart';
 import '../../utils/constants.dart';
 import '../../widgets/custom_button.dart';
+import '../../widgets/glass_panel.dart';
+import '../../widgets/glass_scaffold.dart';
 import '../../widgets/gradient_header.dart';
 import '../../widgets/student_form.dart';
 
@@ -71,7 +73,7 @@ class _EditStudentScreenState extends State<EditStudentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GlassScaffold(
       body: Column(
         children: [
           GradientHeader(
@@ -85,13 +87,11 @@ class _EditStudentScreenState extends State<EditStudentScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
+                  GlassPanel(
+                    radius: kCardRadius,
+                    blur: 24,
+                    strong: true,
                     padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(kCardRadius),
-                      border: Border.all(color: AppColors.border),
-                    ),
                     child: StudentForm(
                       key: _formKey,
                       student: widget.student,

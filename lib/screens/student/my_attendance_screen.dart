@@ -5,10 +5,12 @@ import '../../models/event_model.dart';
 import '../../models/student_model.dart';
 import '../../services/attendance_service.dart';
 import '../../services/auth_service.dart';
+import '../../utils/app_theme.dart';
 import '../../utils/constants.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/attendance_card.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/glass_panel.dart';
 import '../../widgets/gradient_header.dart';
 
 /// Student's own attendance history (read-only).
@@ -174,15 +176,22 @@ class _EventsChips extends StatelessWidget {
           final event = summary.event;
           final isActive = _eventIsActive(event);
           final selected = event.id == selectedEventId;
+          final p = AppTheme.paletteOf(context);
           return Material(
-            color: selected ? AppColors.primary : AppColors.surface,
+            color: selected
+                ? AppColors.primary
+                : p.isDark
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : Colors.white.withValues(alpha: 0.55),
             shape: StadiumBorder(
               side: BorderSide(
                 color: selected
                     ? AppColors.primary
                     : isActive
-                        ? AppColors.primary.withValues(alpha: 0.5)
-                        : AppColors.border,
+                        ? AppColors.primary.withValues(alpha: 0.6)
+                        : p.isDark
+                            ? Colors.white.withValues(alpha: 0.25)
+                            : Colors.white.withValues(alpha: 0.9),
               ),
             ),
             child: InkWell(
@@ -205,9 +214,7 @@ class _EventsChips extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
-                        color: selected
-                            ? Colors.white
-                            : AppColors.textPrimary,
+                        color: selected ? Colors.white : p.textPrimary,
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -219,7 +226,7 @@ class _EventsChips extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: selected
                             ? Colors.white.withValues(alpha: 0.25)
-                            : AppColors.indigoLight,
+                            : p.primaryContainer,
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
@@ -253,6 +260,7 @@ class _DayAttendanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = AppTheme.paletteOf(context);
     final first = records.first;
     final eventName = records
             .map((r) => r.eventName)
@@ -262,38 +270,35 @@ class _DayAttendanceCard extends StatelessWidget {
 
     Attendance? recordFor(String check) => byCheck[check];
 
-    return Container(
+    return GlassPanel(
+      radius: 18,
+      blur: 22,
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: AppColors.indigoLight,
+              color: p.primaryContainer,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
               children: [
                 Text(
                   '${first.date.day}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.primary,
+                    color: p.isDark ? p.onPrimaryContainer : AppColors.primary,
                   ),
                 ),
                 Text(
                   _monthAbbr(first.date),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
+                    color: p.isDark ? p.onPrimaryContainer : AppColors.primary,
                   ),
                 ),
               ],
@@ -306,10 +311,10 @@ class _DayAttendanceCard extends StatelessWidget {
               children: [
                 Text(
                   eventName,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+                    color: p.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -370,19 +375,20 @@ class _CheckRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = AppTheme.paletteOf(context);
     final rec = record;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         children: [
-          Icon(icon, size: 14, color: rec == null ? AppColors.border : color),
+          Icon(icon, size: 14, color: rec == null ? p.borderStroke : color),
           const SizedBox(width: 6),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
+              color: p.textSecondary,
             ),
           ),
           const Spacer(),
@@ -391,7 +397,7 @@ class _CheckRow extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w800,
-              color: rec == null ? AppColors.textSecondary : AppColors.textPrimary,
+              color: rec == null ? p.textSecondary : p.textPrimary,
             ),
           ),
         ],

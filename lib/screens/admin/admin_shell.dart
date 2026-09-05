@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../services/session_service.dart';
+import '../../widgets/glass_nav_bar.dart';
+import '../../widgets/glass_scaffold.dart';
 import '../auth/role_selection_screen.dart';
 import 'admin_dashboard.dart';
 import 'admin_profile_screen.dart';
@@ -38,35 +40,35 @@ class AdminShellState extends State<AdminShell> {
       AdminProfileScreen(),
     ];
 
-    return Scaffold(
+    return GlassScaffold(
       body: IndexedStack(index: _index, children: pages),
-      bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: GlassNavBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard_rounded),
+          GlassNavDestination(
+            icon: Icons.dashboard_outlined,
+            selectedIcon: Icons.dashboard_rounded,
             label: 'Dashboard',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.group_outlined),
-            selectedIcon: Icon(Icons.group_rounded),
+          GlassNavDestination(
+            icon: Icons.group_outlined,
+            selectedIcon: Icons.group_rounded,
             label: 'Students',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.qr_code_scanner_rounded),
-            selectedIcon: Icon(Icons.qr_code_scanner_rounded),
+          GlassNavDestination(
+            icon: Icons.qr_code_scanner_rounded,
+            selectedIcon: Icons.qr_code_scanner_rounded,
             label: 'Scan',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.event_note_outlined),
-            selectedIcon: Icon(Icons.event_note_rounded),
+          GlassNavDestination(
+            icon: Icons.event_note_outlined,
+            selectedIcon: Icons.event_note_rounded,
             label: 'Attendance',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline_rounded),
-            selectedIcon: Icon(Icons.person_rounded),
+          GlassNavDestination(
+            icon: Icons.person_outline_rounded,
+            selectedIcon: Icons.person_rounded,
             label: 'Profile',
           ),
         ],

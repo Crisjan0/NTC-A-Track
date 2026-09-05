@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../utils/constants.dart';
+import '../utils/app_theme.dart';
 
 /// Small uppercase-ish section heading with optional trailing action.
 class SectionTitle extends StatelessWidget {
@@ -17,14 +17,15 @@ class SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = AppTheme.paletteOf(context);
     return Row(
       children: [
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w800,
-            color: AppColors.textPrimary,
+            color: p.textPrimary,
             letterSpacing: -0.2,
           ),
         ),

@@ -6,7 +6,6 @@ import 'screens/auth/role_selection_screen.dart';
 import 'screens/student/student_shell.dart';
 import 'services/session_service.dart';
 import 'utils/app_theme.dart';
-import 'utils/constants.dart';
 import 'widgets/glass_panel.dart';
 import 'widgets/liquid_background.dart';
 
@@ -107,21 +106,21 @@ class _SplashScreenState extends State<SplashScreen>
                     strong: true,
                     showSheen: true,
                     child: Container(
-                      padding: const EdgeInsets.all(22),
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        gradient: AppGradients.primary,
+                        color: Colors.white.withValues(alpha: 0.82),
                         borderRadius: BorderRadius.circular(26),
                       ),
-                      child: const Icon(
-                        Icons.qr_code_scanner_rounded,
-                        size: 56,
-                        color: Colors.white,
+                      child: Image.asset(
+                        'assets/icon/app_icon.png',
+                        width: 78,
+                        height: 78,
                       ),
                     ),
                   ),
                   const SizedBox(height: 26),
                   Text(
-                    'Attendance System',
+                    'Attendance',
                     style: TextStyle(
                       color: p.textPrimary,
                       fontSize: 26,
@@ -131,7 +130,7 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'QR Code-Based Student Attendance',
+                    'Simple, clear, and ready to scan',
                     style: TextStyle(
                       color: p.textSecondary,
                       fontSize: 14,

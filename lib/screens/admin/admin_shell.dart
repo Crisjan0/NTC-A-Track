@@ -49,7 +49,7 @@ class AdminShellState extends State<AdminShell> {
           GlassNavDestination(
             icon: Icons.dashboard_outlined,
             selectedIcon: Icons.dashboard_rounded,
-            label: 'Home',
+            label: 'Dashboard',
           ),
           GlassNavDestination(
             icon: Icons.group_outlined,
@@ -60,11 +60,12 @@ class AdminShellState extends State<AdminShell> {
             icon: Icons.qr_code_scanner_rounded,
             selectedIcon: Icons.qr_code_scanner_rounded,
             label: 'Scan',
+            accent: true,
           ),
           GlassNavDestination(
             icon: Icons.event_note_outlined,
             selectedIcon: Icons.event_note_rounded,
-            label: 'Records',
+            label: 'Attendance',
           ),
           GlassNavDestination(
             icon: Icons.person_outline_rounded,

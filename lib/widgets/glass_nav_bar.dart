@@ -10,11 +10,13 @@ class GlassNavDestination {
     required this.icon,
     required this.label,
     this.selectedIcon,
+    this.accent = false,
   });
 
   final IconData icon;
   final IconData? selectedIcon;
   final String label;
+  final bool accent;
 }
 
 /// The liquid-glass bottom tab bar: a floating, frosted capsule with a
@@ -92,7 +94,11 @@ class _NavItem extends StatelessWidget {
             curve: Curves.easeOut,
             height: 52,
             decoration: BoxDecoration(
-              gradient: selected ? AppGradients.primary : null,
+                gradient: selected
+                  ? destination.accent
+                    ? AppGradients.orange
+                    : AppGradients.primary
+                  : null,
               borderRadius: BorderRadius.circular(22),
               boxShadow: selected
                   ? [

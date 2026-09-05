@@ -26,21 +26,21 @@ class RoleSelectionScreen extends StatelessWidget {
               strong: true,
               showSheen: true,
               child: Container(
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  gradient: AppGradients.primary,
+                  color: Colors.white.withValues(alpha: 0.82),
                   borderRadius: BorderRadius.circular(22),
                 ),
-                child: const Icon(
-                  Icons.qr_code_scanner_rounded,
-                  size: 48,
-                  color: Colors.white,
+                child: Image.asset(
+                  'assets/icon/app_icon.png',
+                  width: 76,
+                  height: 76,
                 ),
               ),
             ),
             const SizedBox(height: 20),
             Text(
-              'Attendance System',
+              'Attendance',
               style: TextStyle(
                 color: p.textPrimary,
                 fontSize: 28,
@@ -50,7 +50,7 @@ class RoleSelectionScreen extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'QR Code-Based Student Attendance',
+              'Simple, clear, and ready to scan',
               style: TextStyle(
                 color: p.textSecondary,
                 fontSize: 15,

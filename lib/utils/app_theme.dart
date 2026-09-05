@@ -19,10 +19,8 @@ class AppTheme {
   static ThemeData get dark => _build(GlassPalette.dark);
 
   static ThemeData _build(GlassPalette p) {
-    // Navy in light mode; in dark mode the accent is lifted so primary-tinted
-    // text/icons stay readable on dark glass.
-    final primary = p.isDark ? const Color(0xFF9AA7FF) : AppColors.primary;
-    final onPrimary = p.isDark ? const Color(0xFF1B2157) : Colors.white;
+    final primary = p.isDark ? BrandNavy.c400 : AppColors.primary;
+    final onPrimary = p.isDark ? BrandNavy.c950 : Colors.white;
     final scheme = ColorScheme.fromSeed(
       seedColor: AppColors.primary,
       brightness: p.brightness,
@@ -30,13 +28,13 @@ class AppTheme {
       onPrimary: onPrimary,
       primaryContainer: p.primaryContainer,
       onPrimaryContainer: p.onPrimaryContainer,
-      secondary: p.isDark ? const Color(0xFFFFA14F) : AppColors.orange,
-      onSecondary: p.isDark ? const Color(0xFF461B00) : Colors.white,
+          secondary: p.isDark ? BrandNavy.c300 : AppColors.orange,
+          onSecondary: p.isDark ? BrandNavy.c950 : Colors.white,
       secondaryContainer:
-          p.isDark ? const Color(0xFF5B2C08) : AppColors.orangeLight,
+            p.isDark ? BrandNavy.c800 : AppColors.orangeLight,
       onSecondaryContainer:
-          p.isDark ? const Color(0xFFFFDCC0) : AppColors.orange,
-      surface: p.isDark ? const Color(0xFF141735) : Colors.white,
+            p.isDark ? BrandNavy.c100 : AppColors.orange,
+          surface: p.isDark ? BrandNavy.c900 : Colors.white,
       error: AppColors.danger,
       onSurface: p.textPrimary,
       onSurfaceVariant: p.textSecondary,
@@ -254,7 +252,7 @@ class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: p.isDark ? const Color(0xFF2A2740) : textPrimary,
+        backgroundColor: p.isDark ? BrandNavy.c950 : textPrimary,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
         ),

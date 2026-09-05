@@ -30,6 +30,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   int _totalAttendance = 0;
   List<Attendance> _recent = [];
   String? _activeEventName;
+  bool _recentExpanded = false;
 
   @override
   void initState() {
@@ -148,25 +149,83 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       onManage: _openEvents,
                     ),
                     const SizedBox(height: 24),
-                    const SectionTitle(
-                      title: 'Recent Attendance',
-                      actionLabel: 'View all',
-                      onAction: null,
-                    ),
-                    const SizedBox(height: 12),
-                    if (_recent.isEmpty)
-                      const EmptyState(
-                        icon: Icons.event_note_rounded,
-                        title: 'No attendance yet',
-                        subtitle: 'Scan a student QR code to record attendance',
-                      )
-                    else
-                      ..._recent.map(
-                        (r) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: AttendanceCard(record: r),
+                    // Collapsible "Recent Attendance" dropdown.
+                    GlassPanel(
+                      radius: 16,
+                      blur: 18,
+                      padding: EdgeInsets.zero,
+                      onTap: () =>
+                          setState(() => _recentExpanded = !_recentExpanded),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                gradient: AppGradients.primary,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.event_note_rounded,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Recent Attendance',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppTheme.paletteOf(context).textPrimary,
+                                ),
+                              ),
+                            ),
+                            if (_recent.isNotEmpty) ...[
+                              Text(
+                                '${_recent.length}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color:
+                                      AppTheme.paletteOf(context).textSecondary,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                            ],
+                            AnimatedRotation(
+                              turns: _recentExpanded ? 0.5 : 0,
+                              duration: const Duration(milliseconds: 220),
+                              child: Icon(
+                                Icons.expand_more_rounded,
+                                color: AppTheme.paletteOf(context).textSecondary,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
+                    ),
+                    if (_recentExpanded) ...[
+                      const SizedBox(height: 12),
+                      if (_recent.isEmpty)
+                        const EmptyState(
+                          icon: Icons.event_note_rounded,
+                          title: 'No attendance yet',
+                          subtitle: 'Scan a student QR code to record attendance',
+                        )
+                      else
+                        ..._recent.map(
+                          (r) => Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: AttendanceCard(record: r),
+                          ),
+                        ),
+                    ],
                   ],
                 ],
               ),

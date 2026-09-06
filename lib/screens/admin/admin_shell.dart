@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../../services/session_service.dart';
@@ -23,49 +25,43 @@ class AdminShell extends StatefulWidget {
 class AdminShellState extends State<AdminShell> {
   int _index = 0;
 
-  /// Lets child pages (e.g. dashboard quick actions) switch tabs.
+  /// Lets child pages switch tabs.
   void switchTo(int index) => setState(() => _index = index);
 
   void _openMenu(List<GlassNavDestination> destinations) {
-    showModalBottomSheet<void>(
+    showGeneralDialog<void>(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => SafeArea(
-        minimum: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-        child: GlassPanel(
-          radius: 28,
-          blur: 40,
-          strong: true,
-          borderWidth: 1,
-          showSheen: true,
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var i = 0; i < destinations.length; i++)
-                ListTile(
-                  leading: Icon(
-                    i == _index
-                        ? (destinations[i].selectedIcon ?? destinations[i].icon)
-                        : destinations[i].icon,
-                  ),
-                  title: Text(destinations[i].label),
-                  selected: i == _index,
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    setState(() => _index = i);
-                  },
-                ),
-            ],
-          ),
-        ),
+      barrierDismissible: true,
+      barrierLabel: 'Close admin menu',
+      barrierColor: Colors.transparent, // Transparent para BackdropFilter ang mo-handle sa hanap
+      transitionDuration: const Duration(milliseconds: 280),
+      pageBuilder: (context, animation, secondaryAnimation) => _RadialAdminMenu(
+        destinations: destinations,
+        selectedIndex: _index,
+        onSelected: (index) {
+          Navigator.of(context).pop();
+          setState(() => _index = index);
+        },
       ),
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutBack,
+        );
+        return FadeTransition(
+          opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.8, end: 1.0).animate(curved),
+            alignment: Alignment.bottomCenter,
+            child: child,
+          ),
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    // Defense in depth: never allow a non-admin into the admin shell.
     final session = SessionService.instance.current;
     if (session == null || !session.isAdmin) {
       return const RoleSelectionScreen();
@@ -123,22 +119,14 @@ class AdminShellState extends State<AdminShell> {
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            DecoratedBox(
-              decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .primary
-                      .withValues(alpha: 0.28),
-                    blurRadius: 10,
-                    spreadRadius: 1,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
+            GlassPanel(
+              radius: 30,
+              blur: 24,
+              strong: true,
+              borderWidth: 1,
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
               child: IconButton(
-                padding: const EdgeInsets.all(8),
+                padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
                 tooltip: 'Open admin menu',
                 icon: _HamburgerIcon(
@@ -162,8 +150,8 @@ class _HamburgerIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 32,
-      height: 22,
+      width: 26,
+      height: 18,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -177,12 +165,164 @@ class _HamburgerIcon extends StatelessWidget {
 
   Widget _line() {
     return Container(
-      width: 32,
-      height: 4,
+      width: 26,
+      height: 3.2,
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(3),
       ),
+    );
+  }
+}
+
+class _RadialAdminMenu extends StatelessWidget {
+  const _RadialAdminMenu({
+    required this.destinations,
+    required this.selectedIndex,
+    required this.onSelected,
+  });
+
+  final List<GlassNavDestination> destinations;
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return Material(
+      color: Colors.transparent,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Frosted glass background effect (mo-hanap ang background)
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => Navigator.of(context).pop(),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+              child: Container(
+                color: Colors.black.withValues(alpha: 0.15),
+              ),
+            ),
+          ),
+
+          // Menu Buttons
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final count = destinations.length;
+                final centerX = constraints.maxWidth / 2;
+
+                final radius = (constraints.maxWidth * 0.44).clamp(160.0, 200.0);
+                const bottomOrigin = 38.0;
+                const buttonWidth = 62.0;
+
+                const startAngle = 8.0 * (math.pi / 180.0);
+                const endAngle = 172.0 * (math.pi / 180.0);
+                final step = (endAngle - startAngle) / (count - 1);
+
+                return Stack(
+                  children: [
+                    for (var i = 0; i < count; i++) ...[
+                      () {
+                        final angle = startAngle + (i * step);
+                        final dx = -radius * math.cos(angle);
+                        final dy = bottomOrigin + (radius * math.sin(angle));
+
+                        return Positioned(
+                          left: centerX + dx - (buttonWidth / 2),
+                          bottom: dy,
+                          child: SizedBox(
+                            width: buttonWidth,
+                            child: _RadialMenuButton(
+                              destination: destinations[i],
+                              selected: i == selectedIndex,
+                              color: primary,
+                              onTap: () => onSelected(i),
+                            ),
+                          ),
+                        );
+                      }(),
+                    ],
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RadialMenuButton extends StatelessWidget {
+  const _RadialMenuButton({
+    required this.destination,
+    required this.selected,
+    required this.color,
+    required this.onTap,
+  });
+
+  final GlassNavDestination destination;
+  final bool selected;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Material(
+          color: selected ? color : Colors.white.withValues(alpha: 0.95),
+          shape: const CircleBorder(),
+          elevation: selected ? 8 : 3,
+          shadowColor: color.withValues(alpha: 0.28),
+          child: InkWell(
+            onTap: onTap,
+            customBorder: const CircleBorder(),
+            child: SizedBox(
+              width: 48,
+              height: 48,
+              child: Icon(
+                selected
+                    ? (destination.selectedIcon ?? destination.icon)
+                    : destination.icon,
+                color: selected ? Colors.white : color.withValues(alpha: 0.85),
+                size: 22,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.88),
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Text(
+            destination.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 9.5,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+              color: selected ? color : Colors.black87,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

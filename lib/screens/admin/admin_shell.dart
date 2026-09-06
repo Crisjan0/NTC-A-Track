@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 
@@ -33,9 +32,9 @@ class AdminShellState extends State<AdminShell> {
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Close admin menu',
-      barrierColor: Colors.transparent, // Transparent para BackdropFilter ang mo-handle sa hanap
+      barrierColor: Colors.transparent,
       transitionDuration: const Duration(milliseconds: 280),
-      pageBuilder: (context, animation, secondaryAnimation) => _RadialAdminMenu(
+      pageBuilder: (context, animation, secondaryAnimation) => _SwipeableAdminDock(
         destinations: destinations,
         selectedIndex: _index,
         onSelected: (index) {
@@ -46,13 +45,15 @@ class AdminShellState extends State<AdminShell> {
       transitionBuilder: (context, animation, secondaryAnimation, child) {
         final curved = CurvedAnimation(
           parent: animation,
-          curve: Curves.easeOutBack,
+          curve: Curves.easeOutCubic,
         );
         return FadeTransition(
           opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
-          child: ScaleTransition(
-            scale: Tween<double>(begin: 0.8, end: 1.0).animate(curved),
-            alignment: Alignment.bottomCenter,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.25),
+              end: Offset.zero,
+            ).animate(curved),
             child: child,
           ),
         );
@@ -175,8 +176,8 @@ class _HamburgerIcon extends StatelessWidget {
   }
 }
 
-class _RadialAdminMenu extends StatelessWidget {
-  const _RadialAdminMenu({
+class _SwipeableAdminDock extends StatelessWidget {
+  const _SwipeableAdminDock({
     required this.destinations,
     required this.selectedIndex,
     required this.onSelected,
@@ -193,61 +194,69 @@ class _RadialAdminMenu extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: Stack(
-        fit: StackFit.expand,
         children: [
-          // Frosted glass background effect (mo-hanap ang background)
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => Navigator.of(context).pop(),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.15),
+          // Background blur nga mo-hanap ang luyo
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => Navigator.of(context).pop(),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                child: Container(
+                  color: Colors.black.withValues(alpha: 0.2),
+                ),
               ),
             ),
           ),
 
-          // Menu Buttons
-          SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final count = destinations.length;
-                final centerX = constraints.maxWidth / 2;
-
-                final radius = (constraints.maxWidth * 0.44).clamp(160.0, 200.0);
-                const bottomOrigin = 38.0;
-                const buttonWidth = 62.0;
-
-                const startAngle = 8.0 * (math.pi / 180.0);
-                const endAngle = 172.0 * (math.pi / 180.0);
-                final step = (endAngle - startAngle) / (count - 1);
-
-                return Stack(
-                  children: [
-                    for (var i = 0; i < count; i++) ...[
-                      () {
-                        final angle = startAngle + (i * step);
-                        final dx = -radius * math.cos(angle);
-                        final dy = bottomOrigin + (radius * math.sin(angle));
-
-                        return Positioned(
-                          left: centerX + dx - (buttonWidth / 2),
-                          bottom: dy,
-                          child: SizedBox(
-                            width: buttonWidth,
-                            child: _RadialMenuButton(
+          // Horizontal scrollable buttons nga naglinya
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: SafeArea(
+              minimum: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GlassPanel(
+                    radius: 36,
+                    blur: 30,
+                    strong: true,
+                    borderWidth: 1.2,
+                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          for (var i = 0; i < destinations.length; i++) ...[
+                            _DockItem(
                               destination: destinations[i],
                               selected: i == selectedIndex,
                               color: primary,
                               onTap: () => onSelected(i),
                             ),
-                          ),
-                        );
-                      }(),
-                    ],
-                  ],
-                );
-              },
+                            if (i != destinations.length - 1)
+                              const SizedBox(width: 14),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.close_rounded, size: 20, color: Colors.black87),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -256,8 +265,8 @@ class _RadialAdminMenu extends StatelessWidget {
   }
 }
 
-class _RadialMenuButton extends StatelessWidget {
-  const _RadialMenuButton({
+class _DockItem extends StatelessWidget {
+  const _DockItem({
     required this.destination,
     required this.selected,
     required this.color,
@@ -271,58 +280,57 @@ class _RadialMenuButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Material(
-          color: selected ? color : Colors.white.withValues(alpha: 0.95),
-          shape: const CircleBorder(),
-          elevation: selected ? 8 : 3,
-          shadowColor: color.withValues(alpha: 0.28),
-          child: InkWell(
-            onTap: onTap,
-            customBorder: const CircleBorder(),
-            child: SizedBox(
-              width: 48,
-              height: 48,
-              child: Icon(
-                selected
-                    ? (destination.selectedIcon ?? destination.icon)
-                    : destination.icon,
-                color: selected ? Colors.white : color.withValues(alpha: 0.85),
-                size: 22,
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              color: selected ? color : Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: selected
+                      ? color.withValues(alpha: 0.38)
+                      : Colors.black.withValues(alpha: 0.12),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Icon(
+              selected
+                  ? (destination.selectedIcon ?? destination.icon)
+                  : destination.icon,
+              color: selected ? Colors.white : color,
+              size: 24,
+            ),
+          ),
+          const SizedBox(height: 6),
+          // Pill badge aron lutaw ug klaro kaayo ang label bisan grey ang background
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: selected
+                  ? color.withValues(alpha: 0.15)
+                  : Colors.black.withValues(alpha: 0.65),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              destination.label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                color: selected ? color : Colors.white,
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 4),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.88),
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 4,
-                offset: const Offset(0, 1),
-              ),
-            ],
-          ),
-          child: Text(
-            destination.label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 9.5,
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-              color: selected ? color : Colors.black87,
-            ),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

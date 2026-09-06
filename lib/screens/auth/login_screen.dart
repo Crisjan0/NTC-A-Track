@@ -71,9 +71,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return GlassScaffold(
       animated: true,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
             // Floating gradient glass header with the back action.
             SafeArea(
               bottom: false,
@@ -235,67 +241,18 @@ class _LoginScreenState extends State<LoginScreen> {
                       loading: _loading,
                       onPressed: _loading ? null : _submit,
                     ),
-                    const SizedBox(height: 20),
-                    const _DemoHint(),
                       ],
                     ),
                   ),
                 ),
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DemoHint extends StatelessWidget {
-  const _DemoHint();
-
-  @override
-  Widget build(BuildContext context) {
-    final p = AppTheme.paletteOf(context);
-    final scheme = Theme.of(context).colorScheme;
-    return GlassPanel(
-      radius: 16,
-      blur: 18,
-      borderWidth: 0.8,
-      showSheen: false,
-      fill: p.isDark
-          ? Colors.white.withValues(alpha: 0.09)
-          : Colors.white.withValues(alpha: 0.5),
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.info_outline_rounded, size: 16, color: scheme.primary),
-              const SizedBox(width: 6),
-              Text(
-                'Demo credentials',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: scheme.primary,
+                  ],
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Admin:\nUsername: ${DemoCredentials.adminUsername}\nPassword: ${DemoCredentials.adminPassword}\n\n'
-            'Student:\nStudent ID: 2026-0001\nPassword: ${DemoCredentials.studentPassword}\n'
-            '(Other IDs: 2026-0002 … 2026-0005)',
-            style: TextStyle(
-              fontSize: 12,
-              height: 1.5,
-              fontWeight: FontWeight.w500,
-              color: p.textPrimary,
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }

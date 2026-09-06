@@ -192,13 +192,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 26, 24, 32),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+            Center(
+              child: SizedBox(
+                width: 350,  // Limit form width for centered layout
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 26, 24, 32),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
                     TextFormField(
                       controller: _identifierController,
                       textInputAction: TextInputAction.next,
@@ -280,7 +284,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 20),
                     _DemoHint(role: widget.role),
-                  ],
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),

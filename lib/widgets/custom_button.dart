@@ -27,7 +27,7 @@ class CustomButton extends StatelessWidget {
     final enabled = onPressed != null && !loading;
     return Center(
       child: SizedBox(
-        width: width ?? 125,  // Narrower default (was double.infinity)
+        width: width ?? double.infinity,
         height: 48,
       child: DecoratedBox(
         decoration: BoxDecoration(

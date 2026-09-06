@@ -47,6 +47,46 @@ class AuthService {
     return session;
   }
 
+  /// Unified auto-detecting login - tries to authenticate as either admin or student
+  /// based on the provided identifier. Returns the session and detected role.
+  Future<Session> loginAuto(String identifier, String password) async {
+    // Try as admin first (username)
+    try {
+      final user = await _db.getUserByUsername(identifier);
+      if (user != null) {
+        _verify(user.passwordHash, user.salt, password);
+        final session = Session(role: 'admin', username: user.username);
+        await _sessions.save(session);
+        return session;
+      }
+    } catch (e) {
+      // If admin login failed, try student
+    }
+
+    // Try as student (Student ID)
+    try {
+      final student = await _db.getStudentById(identifier.trim());
+      if (student != null) {
+        _verify(student.passwordHash, student.salt, password);
+        final session = Session(
+          role: 'student',
+          username: student.studentId,
+          studentId: student.studentId,
+          fullName: student.fullName,
+        );
+        await _sessions.save(session);
+        return session;
+      }
+    } catch (e) {
+      // If student login failed too, throw error
+    }
+
+    // Neither admin nor student found
+    throw const AuthException(
+      'Account not found. Please check your username or Student ID.',
+    );
+  }
+
   void _verify(String storedHash, String salt, String password) {
     if (!DatabaseService.verifyPassword(password, salt, storedHash)) {
       throw const AuthException('Incorrect password. Please try again.');

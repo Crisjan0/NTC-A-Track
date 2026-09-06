@@ -9,13 +9,10 @@ import '../../widgets/glass_panel.dart';
 import '../../widgets/glass_scaffold.dart';
 import '../admin/admin_shell.dart';
 import '../student/student_shell.dart';
-import 'role_selection_screen.dart';
 
-/// Shared login screen; fields adapt to the selected role.
+/// Unified login screen - auto-detects role (Admin or Student) from credentials
 class LoginScreen extends StatefulWidget {
-  final String role; // 'admin' | 'student'
-
-  const LoginScreen({super.key, required this.role});
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -28,8 +25,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscure = true;
   bool _loading = false;
   String? _error;
-
-  bool get _isAdmin => widget.role == 'admin';
 
   @override
   void dispose() {
@@ -47,22 +42,19 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      if (_isAdmin) {
-        await AuthService.instance.loginAdmin(
-          _identifierController.text,
-          _passwordController.text,
-        );
-      } else {
-        await AuthService.instance.loginStudent(
-          _identifierController.text,
-          _passwordController.text,
-        );
-      }
+      // Auto-detect role from identifier
+      final session = await AuthService.instance.loginAuto(
+        _identifierController.text,
+        _passwordController.text,
+      );
+
       if (!mounted) return;
+      
+      // Navigate to appropriate dashboard based on detected role
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
           builder: (_) =>
-              _isAdmin ? const AdminShell() : const StudentShell(),
+              session.isAdmin ? const AdminShell() : const StudentShell(),
         ),
         (route) => false,
       );
@@ -109,22 +101,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          IconButton(
-                            onPressed: () =>
-                                Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(
-                                builder: (_) => const RoleSelectionScreen(),
-                              ),
-                            ),
-                            icon: const Icon(
-                              Icons.arrow_back_rounded,
-                              color: Colors.white,
-                            ),
-                            style: IconButton.styleFrom(
-                              backgroundColor:
-                                  Colors.white.withValues(alpha: 0.18),
-                            ),
-                          ),
                           const SizedBox(height: 14),
                           Row(
                             children: [
@@ -138,10 +114,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                         .withValues(alpha: 0.25),
                                   ),
                                 ),
-                                child: Icon(
-                                  _isAdmin
-                                      ? Icons.admin_panel_settings_rounded
-                                      : Icons.school_rounded,
+                                child: const Icon(
+                                  Icons.login_rounded,
                                   color: Colors.white,
                                   size: 30,
                                 ),
@@ -152,9 +126,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                   crossAxisAlignment:
                                       CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      '${_isAdmin ? 'Admin' : 'Student'} Login',
-                                      style: const TextStyle(
+                                    const Text(
+                                      'Login',
+                                      style: TextStyle(
                                         color: Colors.white,
                                         fontSize: 24,
                                         fontWeight: FontWeight.w800,
@@ -170,9 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      _isAdmin
-                                          ? 'Sign in to manage the system'
-                                          : 'Sign in with your Student ID',
+                                      'Enter your credentials to access your account',
                                       style: TextStyle(
                                         color: Colors.white
                                             .withValues(alpha: 0.9),
@@ -206,21 +178,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextFormField(
                       controller: _identifierController,
                       textInputAction: TextInputAction.next,
-                      autofillHints: _isAdmin
-                          ? const [AutofillHints.username]
-                          : null,
-                      validator: _isAdmin
-                          ? Validators.username
-                          : Validators.studentId,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Username or Student ID is required';
+                        }
+                        return null;
+                      },
                       decoration: InputDecoration(
-                        labelText: _isAdmin ? 'Username' : 'Student ID',
-                        hintText:
-                            _isAdmin ? 'e.g. admin' : 'e.g. 2026-0001',
-                        prefixIcon: Icon(
-                          _isAdmin
-                              ? Icons.person_outline_rounded
-                              : Icons.badge_outlined,
-                        ),
+                        labelText: 'Username or Student ID',
+                        hintText: 'e.g. admin or 2026-0001',
+                        prefixIcon: const Icon(Icons.person_outline_rounded),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -283,7 +250,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: _loading ? null : _submit,
                     ),
                     const SizedBox(height: 20),
-                    _DemoHint(role: widget.role),
+                    const _DemoHint(),
                       ],
                     ),
                   ),
@@ -298,15 +265,12 @@ class _LoginScreenState extends State<LoginScreen> {
 }
 
 class _DemoHint extends StatelessWidget {
-  final String role;
-
-  const _DemoHint({required this.role});
+  const _DemoHint();
 
   @override
   Widget build(BuildContext context) {
     final p = AppTheme.paletteOf(context);
     final scheme = Theme.of(context).colorScheme;
-    final isAdmin = role == 'admin';
     return GlassPanel(
       radius: 16,
       blur: 18,
@@ -335,9 +299,9 @@ class _DemoHint extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            isAdmin
-                ? 'Username: ${DemoCredentials.adminUsername}\nPassword: ${DemoCredentials.adminPassword}'
-                : 'Student ID: 2026-0001\nPassword: ${DemoCredentials.studentPassword}\n(Other seeded IDs: 2026-0002 … 2026-0005)',
+            'Admin:\nUsername: ${DemoCredentials.adminUsername}\nPassword: ${DemoCredentials.adminPassword}\n\n'
+            'Student:\nStudent ID: 2026-0001\nPassword: ${DemoCredentials.studentPassword}\n'
+            '(Other IDs: 2026-0002 … 2026-0005)',
             style: TextStyle(
               fontSize: 12,
               height: 1.5,

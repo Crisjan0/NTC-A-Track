@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'screens/admin/admin_shell.dart';
-import 'screens/auth/role_selection_screen.dart';
+import 'screens/auth/login_screen.dart';
 import 'screens/student/student_shell.dart';
 import 'services/session_service.dart';
 import 'utils/app_theme.dart';
@@ -38,7 +38,7 @@ class AttendanceApp extends StatelessWidget {
 }
 
 /// Launch screen: restores the saved session, then routes to the right
-/// dashboard (or the role selection screen when logged out).
+/// dashboard (or the login screen when logged out).
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -72,7 +72,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     final session = SessionService.instance.current;
     final Widget home = session == null
-        ? const RoleSelectionScreen()
+        ? const LoginScreen()  // Go directly to login, no role selection
         : session.isAdmin
             ? const AdminShell()
             : const StudentShell();

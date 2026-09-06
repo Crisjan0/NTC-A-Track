@@ -108,7 +108,7 @@ class RoleSelectionScreen extends StatelessWidget {
     Navigator.of(context).push(
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 320),
-        pageBuilder: (_, animation, _) => LoginScreen(role: role),
+        pageBuilder: (_, animation, _) => const LoginScreen(),
         transitionsBuilder: (_, animation, _, child) {
           return FadeTransition(
             opacity: animation,

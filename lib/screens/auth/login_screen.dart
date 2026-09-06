@@ -112,8 +112,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             child: Image.asset(
                               'assets/icon/ntc-icon.png',
-                              width: 150,
-                              height: 150,
+                              width: 130,
+                              height: 130,
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -242,11 +242,17 @@ class _LoginScreenState extends State<LoginScreen> {
         fontWeight: FontWeight.w600,
       ),
       decoration: InputDecoration(
-        hintText: hintText,
-        hintStyle: GoogleFonts.manrope(
+        labelText: hintText,
+        floatingLabelBehavior: FloatingLabelBehavior.auto,
+        labelStyle: GoogleFonts.manrope(
           color: Color(0xFF777777),
           fontSize: 14,
           fontWeight: FontWeight.w500,
+        ),
+        floatingLabelStyle: GoogleFonts.manrope(
+          color: Color(0xFF666666),
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
         ),
         prefixIcon: Icon(icon, color: const Color(0xFF777777), size: 21),
         suffixIcon: suffixIcon,

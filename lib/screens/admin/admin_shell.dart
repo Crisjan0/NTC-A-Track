@@ -118,33 +118,47 @@ class AdminShellState extends State<AdminShell> {
       ),
     ];
 
-    return GlassScaffold(
-      body: IndexedStack(index: _index, children: pages),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        minimum: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            GlassPanel(
-              radius: 30,
-              blur: 24,
-              strong: true,
-              borderWidth: 1,
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                tooltip: 'Open admin menu',
-                icon: _HamburgerIcon(
-                  color: Theme.of(context).colorScheme.primary,
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          // Content sa page
+          Positioned.fill(
+            child: IndexedStack(index: _index, children: pages),
+          ),
+
+          // Kana ra gyung pill/capsule button ang maglutaw sa ubos
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: SafeArea(
+              minimum: const EdgeInsets.only(bottom: 20),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => _openMenu(destinations),
+                  borderRadius: BorderRadius.circular(35),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F3F5),
+                      borderRadius: BorderRadius.circular(35),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: _HamburgerIcon(
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
                 ),
-                onPressed: () => _openMenu(destinations),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -158,8 +172,8 @@ class _HamburgerIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 26,
-      height: 18,
+      width: 24,
+      height: 16,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -173,11 +187,11 @@ class _HamburgerIcon extends StatelessWidget {
 
   Widget _line() {
     return Container(
-      width: 26,
-      height: 3.2,
+      width: 24,
+      height: 2.8,
       decoration: BoxDecoration(
         color: color,
-        borderRadius: BorderRadius.circular(3),
+        borderRadius: BorderRadius.circular(2),
       ),
     );
   }
@@ -202,7 +216,6 @@ class _SwipeableAdminDock extends StatelessWidget {
       color: Colors.transparent,
       child: Stack(
         children: [
-          // Background blur nga mo-hanap ang luyo
           Positioned.fill(
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
@@ -210,13 +223,11 @@ class _SwipeableAdminDock extends StatelessWidget {
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
                 child: Container(
-                  color: Colors.black.withValues(alpha: 0.2),
+                  color: Colors.black.withOpacity(0.2),
                 ),
               ),
             ),
           ),
-
-          // Horizontal scrollable buttons nga naglinya
           Align(
             alignment: Alignment.bottomCenter,
             child: SafeArea(
@@ -256,7 +267,7 @@ class _SwipeableAdminDock extends StatelessWidget {
                     icon: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.85),
+                        color: Colors.white.withOpacity(0.85),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(Icons.close_rounded, size: 20, color: Colors.black87),
@@ -302,8 +313,8 @@ class _DockItem extends StatelessWidget {
               boxShadow: [
                 BoxShadow(
                   color: selected
-                      ? color.withValues(alpha: 0.38)
-                      : Colors.black.withValues(alpha: 0.12),
+                      ? color.withOpacity(0.38)
+                      : Colors.black.withOpacity(0.12),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -318,13 +329,12 @@ class _DockItem extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          // Pill badge aron lutaw ug klaro kaayo ang label bisan grey ang background
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
               color: selected
-                  ? color.withValues(alpha: 0.15)
-                  : Colors.black.withValues(alpha: 0.65),
+                  ? color.withOpacity(0.15)
+                  : Colors.black.withOpacity(0.65),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(

@@ -57,7 +57,7 @@ class StudentShellState extends State<StudentShell> {
           GlassNavDestination(
             icon: Icons.event_note_outlined,
             selectedIcon: Icons.event_note_rounded,
-            label: 'History',
+            label: 'My Attendance',
           ),
           GlassNavDestination(
             icon: Icons.person_outline_rounded,

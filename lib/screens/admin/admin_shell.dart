@@ -9,6 +9,7 @@ import 'admin_profile_screen.dart';
 import 'attendance_management_screen.dart';
 import 'qr_scanner_screen.dart';
 import 'student_management_screen.dart';
+import 'user_management_screen.dart';
 
 /// Admin's main scaffold: bottom navigation across all admin pages.
 class AdminShell extends StatefulWidget {
@@ -35,6 +36,7 @@ class AdminShellState extends State<AdminShell> {
     final pages = const [
       AdminDashboard(),
       StudentManagementScreen(),
+      UserManagementScreen(),
       QrScanLandingPage(),
       AttendanceManagementScreen(),
       AdminProfileScreen(),
@@ -55,6 +57,11 @@ class AdminShellState extends State<AdminShell> {
             icon: Icons.group_outlined,
             selectedIcon: Icons.group_rounded,
             label: 'Students',
+          ),
+          GlassNavDestination(
+            icon: Icons.admin_panel_settings_outlined,
+            selectedIcon: Icons.admin_panel_settings_rounded,
+            label: 'Users',
           ),
           GlassNavDestination(
             icon: Icons.qr_code_scanner_rounded,

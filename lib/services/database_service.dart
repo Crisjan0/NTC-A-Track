@@ -374,6 +374,85 @@ class DatabaseService {
     return rows.isEmpty ? null : User.fromMap(rows.first);
   }
 
+  /// All admin accounts, newest first.
+  Future<List<User>> getAllUsers() async {
+    final db = await database;
+    final rows = await db.query(
+      kUsersTable,
+      orderBy: 'created_at DESC',
+    );
+    return rows.map(User.fromMap).toList();
+  }
+
+  /// Update an existing admin's password. Returns the new salt + hash map so
+  /// callers can also update their own in-memory copy.
+  Future<Map<String, String>> updateUserPassword(
+    int userId,
+    String plainPassword,
+  ) async {
+    final creds = hashPassword(plainPassword);
+    await database.then((db) => db.update(
+      kUsersTable,
+      {
+        'password_hash': creds['hash'],
+        'salt': creds['salt'],
+      },
+      where: 'id = ?',
+      whereArgs: [userId],
+    ));
+    return creds;
+  }
+
+  /// Update an existing admin account's metadata (username and/or role).
+  /// Usernames are unique, so a collision with another account is rejected.
+  Future<bool> updateUser(
+    User user,
+    {String? newUsername,
+    String? newRole,
+  }) async {
+    final db = await database;
+    if (newUsername != null && newUsername.trim().isNotEmpty) {
+      final collision = await db.query(
+        kUsersTable,
+        columns: ['id'],
+        where: 'username = ? AND id != ?',
+        whereArgs: [newUsername.trim(), user.id],
+        limit: 1,
+      );
+      if (collision.isNotEmpty) return false;
+    }
+
+    await db.update(
+      kUsersTable,
+      {
+        if (newUsername != null && newUsername.trim().isNotEmpty)
+          'username': newUsername.trim(),
+        if (newRole != null && newRole.trim().isNotEmpty)
+          'role': newRole.trim(),
+      },
+      where: 'id = ?',
+      whereArgs: [user.id],
+    );
+    return true;
+  }
+
+  /// Deletes an admin account. The caller is responsible for preventing an
+  /// admin from deleting their own account (caller supplies [currentUserId]).
+  Future<bool> deleteUser(int userId, {int? currentUserId}) async {
+    if (currentUserId == userId) return false;
+    final db = await database;
+    final rows = await db.query(
+      kUsersTable,
+      columns: ['id'],
+      where: 'id = ?',
+      whereArgs: [userId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return false;
+    await db.delete(kUsersTable, where: 'id = ?', whereArgs: [userId]);
+    return true;
+  }
+
   Future<Student?> getStudentById(String studentId) async {
     final db = await database;
     final rows = await db.query(

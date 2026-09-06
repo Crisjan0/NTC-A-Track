@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../services/auth_service.dart';
-import '../../utils/app_theme.dart';
-import '../../utils/constants.dart';
 import '../../utils/validators.dart';
 import '../../widgets/custom_button.dart';
-import '../../widgets/glass_panel.dart';
 import '../../widgets/glass_scaffold.dart';
 import '../admin/admin_shell.dart';
 import '../student/student_shell.dart';
@@ -67,192 +65,215 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final p = AppTheme.paletteOf(context);
-
     return GlassScaffold(
-      animated: true,
+      animated: false,
       body: LayoutBuilder(
         builder: (context, constraints) {
           return SingleChildScrollView(
             child: ConstrainedBox(
               constraints: BoxConstraints(minHeight: constraints.maxHeight),
               child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-            // Floating gradient glass header with the back action.
-            SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                child: GlassPanel(
-                  radius: 26,
-                  blur: 30,
-                  strong: true,
-                  child: DecoratedBox(
+                child: TweenAnimationBuilder<double>(
+                  duration: const Duration(milliseconds: 650),
+                  curve: Curves.easeOutCubic,
+                  tween: Tween(begin: 0.94, end: 1),
+                  builder: (context, scale, child) {
+                    return Transform.scale(
+                      scale: scale,
+                      child: child,
+                    );
+                  },
+                  child: Container(
+                    width: 390,
+                    margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                    padding: const EdgeInsets.all(28),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          AppColors.primary
-                              .withValues(alpha: p.isDark ? 0.75 : 0.85),
-                          AppColors.primaryDark
-                              .withValues(alpha: p.isDark ? 0.6 : 0.7),
-                        ],
-                      ),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(color: const Color(0xFFD6D6D6)),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x22000000),
+                          blurRadius: 24,
+                          offset: Offset(0, 12),
+                        ),
+                      ],
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 14, 14, 20),
+                    child: Form(
+                      key: _formKey,
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          GlassPanel(
-                            radius: 16,
-                            blur: 20,
-                            showSheen: true,
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.8),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Image.asset(
-                                'assets/icon/app_icon.png',
-                                width: 64,
-                                height: 64,
-                              ),
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF2F2F2),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: const Color(0xFFE0E0E0)),
+                            ),
+                            child: Image.asset(
+                              'assets/icon/ntc-icon.png',
+                              width: 68,
+                              height: 68,
                             ),
                           ),
-                          const SizedBox(height: 12),
-                          const Text(
+                          const SizedBox(height: 16),
+                          Text(
                             'NTC A-Track',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
+                            style: GoogleFonts.manrope(
+                              color: Color(0xFF202020),
+                              fontSize: 24,
                               fontWeight: FontWeight.w800,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.black26,
-                                  blurRadius: 4,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
+                              letterSpacing: -0.4,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 5),
                           Text(
                             'Attendance Tracking System',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.85),
+                            style: GoogleFonts.manrope(
+                              color: Color(0xFF777777),
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
+                              letterSpacing: 0.2,
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Center(
-              child: SizedBox(
-                width: 350,  // Limit form width for centered layout
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 26, 24, 32),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                    TextFormField(
-                      controller: _identifierController,
-                      textInputAction: TextInputAction.next,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Username or Student ID is required';
-                        }
-                        return null;
-                      },
-                      decoration: InputDecoration(
-                        labelText: 'Username or Student ID',
-                        hintText: 'e.g. admin or 2026-0001',
-                        prefixIcon: const Icon(Icons.person_outline_rounded),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: _obscure,
-                      textInputAction: TextInputAction.done,
-                      validator: Validators.password,
-                      onFieldSubmitted: (_) => _submit(),
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        hintText: 'Enter your password',
-                        prefixIcon: const Icon(Icons.lock_outline_rounded),
-                        suffixIcon: IconButton(
-                          onPressed: () => setState(() => _obscure = !_obscure),
-                          icon: Icon(
-                            _obscure
-                                ? Icons.visibility_off_rounded
-                                : Icons.visibility_rounded,
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (_error != null) ...[
-                      const SizedBox(height: 16),
-                      GlassPanel(
-                        radius: 14,
-                        blur: 14,
-                        borderWidth: 0.8,
-                        showSheen: false,
-                        fill: AppColors.danger,
-                        padding: const EdgeInsets.all(12),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.error_outline_rounded,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                _error!,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
+                          const SizedBox(height: 24),
+                          Row(
+                            children: [
+                              const Expanded(child: Divider(color: Color(0xFFE0E0E0))),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: Text(
+                                  'SIGN IN TO CONTINUE',
+                                  style: GoogleFonts.manrope(
+                                    color: Color(0xFF888888),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 1.1,
+                                  ),
                                 ),
+                              ),
+                              const Expanded(child: Divider(color: Color(0xFFE0E0E0))),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          _buildField(
+                            controller: _identifierController,
+                            hintText: 'Username or Student ID',
+                            icon: Icons.person_outline_rounded,
+                            textInputAction: TextInputAction.next,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Username or Student ID is required';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          _buildField(
+                            controller: _passwordController,
+                            hintText: 'Password',
+                            icon: Icons.lock_outline_rounded,
+                            obscureText: _obscure,
+                            textInputAction: TextInputAction.done,
+                            validator: Validators.password,
+                            onFieldSubmitted: (_) => _submit(),
+                            suffixIcon: IconButton(
+                              onPressed: () => setState(() => _obscure = !_obscure),
+                              icon: Icon(
+                                _obscure
+                                    ? Icons.visibility_off_rounded
+                                    : Icons.visibility_rounded,
+                                color: const Color(0xFF777777),
+                              ),
+                            ),
+                          ),
+                          if (_error != null) ...[
+                            const SizedBox(height: 14),
+                            Text(
+                              _error!,
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.manrope(
+                                color: Color(0xFF555555),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
-                        ),
+                          const SizedBox(height: 28),
+                          CustomButton(
+                            label: 'Login',
+                            icon: Icons.login_rounded,
+                            width: 150,
+                            loading: _loading,
+                            onPressed: _loading ? null : _submit,
+                          ),
+                        ],
                       ),
-                    ],
-                    const SizedBox(height: 24),
-                    CustomButton(
-                      label: 'Login',
-                      icon: Icons.login_rounded,
-                      loading: _loading,
-                      onPressed: _loading ? null : _submit,
-                    ),
-                      ],
                     ),
                   ),
-                ),
-              ),
-            ),
-                  ],
                 ),
               ),
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildField({
+    required TextEditingController controller,
+    required String hintText,
+    required IconData icon,
+    required TextInputAction textInputAction,
+    required String? Function(String?) validator,
+    bool obscureText = false,
+    ValueChanged<String>? onFieldSubmitted,
+    Widget? suffixIcon,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: obscureText,
+      textInputAction: textInputAction,
+      validator: validator,
+      onFieldSubmitted: onFieldSubmitted,
+      style: GoogleFonts.manrope(
+        color: Color(0xFF202020),
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+      ),
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: GoogleFonts.manrope(
+          color: Color(0xFF777777),
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+        prefixIcon: Icon(icon, color: const Color(0xFF777777), size: 21),
+        suffixIcon: suffixIcon,
+        filled: true,
+        fillColor: const Color(0xFFF7F7F7),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 17),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(17),
+          borderSide: const BorderSide(color: Color(0xFFD1D1D1)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(17),
+          borderSide: const BorderSide(color: Color(0xFFD1D1D1)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(17),
+          borderSide: const BorderSide(color: Color(0xFF666666), width: 1.6),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(17),
+          borderSide: const BorderSide(color: Color(0xFF777777)),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(17),
+          borderSide: const BorderSide(color: Color(0xFF555555), width: 1.6),
+        ),
       ),
     );
   }

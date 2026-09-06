@@ -1,6 +1,7 @@
 import '../models/student_model.dart';
 import '../models/user_model.dart';
 import 'database_service.dart';
+import 'login_rate_limiter.dart';
 import 'session_service.dart';
 
 /// Handles authentication for both roles.
@@ -16,13 +17,21 @@ class AuthService {
   final DatabaseService _db = DatabaseService.instance;
   final SessionService _sessions = SessionService.instance;
 
-  /// Returns the created session, or throws [AuthException] on failure.
+  /// Returns the created session, or throws [AuthException] / [RateLimitException]
+  /// on failure.
   Future<Session> loginAdmin(String username, String password) async {
-    final user = await _db.getUserByUsername(username);
+    final identifier = username.trim();
+    await _enforceRateLimit(identifier);
+
+    final user = await _db.getUserByUsername(identifier);
     if (user == null) {
       throw const AuthException('Account not found. Please check your username.');
     }
-    _verify(user.passwordHash, user.salt, password);
+    if (!DatabaseService.verifyPassword(password, user.salt, user.passwordHash)) {
+      await _recordFailureOrThrow(identifier);
+      throw const AuthException('Incorrect password. Please try again.');
+    }
+    await LoginRateLimiter.instance.clear(identifier);
 
     final session = Session(role: 'admin', username: user.username);
     await _sessions.save(session);
@@ -31,11 +40,19 @@ class AuthService {
 
   /// Students log in with their Student ID number.
   Future<Session> loginStudent(String studentId, String password) async {
-    final student = await _db.getStudentById(studentId.trim());
+    final identifier = studentId.trim();
+    await _enforceRateLimit(identifier);
+
+    final student = await _db.getStudentById(identifier);
     if (student == null) {
       throw const AuthException('Student not found. Please check your Student ID.');
     }
-    _verify(student.passwordHash, student.salt, password);
+    if (!DatabaseService.verifyPassword(
+        password, student.salt, student.passwordHash)) {
+      await _recordFailureOrThrow(identifier);
+      throw const AuthException('Incorrect password. Please try again.');
+    }
+    await LoginRateLimiter.instance.clear(identifier);
 
     final session = Session(
       role: 'student',
@@ -47,27 +64,33 @@ class AuthService {
     return session;
   }
 
-  /// Unified auto-detecting login - tries to authenticate as either admin or student
-  /// based on the provided identifier. Returns the session and detected role.
+  /// Unified auto-detecting login - tries to authenticate as either admin or
+  /// student based on the provided identifier. Returns the session and the
+  /// detected role. Wrong passwords count toward the per-identifier lock.
   Future<Session> loginAuto(String identifier, String password) async {
-    // Try as admin first (username)
-    try {
-      final user = await _db.getUserByUsername(identifier);
-      if (user != null) {
-        _verify(user.passwordHash, user.salt, password);
+    final cleaned = identifier.trim();
+    await _enforceRateLimit(cleaned);
+
+    // Try as admin first (username).
+    final user = await _db.getUserByUsername(cleaned);
+    if (user != null) {
+      if (DatabaseService.verifyPassword(
+          password, user.salt, user.passwordHash)) {
+        await LoginRateLimiter.instance.clear(cleaned);
         final session = Session(role: 'admin', username: user.username);
         await _sessions.save(session);
         return session;
       }
-    } catch (e) {
-      // If admin login failed, try student
+      await _recordFailureOrThrow(cleaned);
+      throw const AuthException('Incorrect password. Please try again.');
     }
 
-    // Try as student (Student ID)
-    try {
-      final student = await _db.getStudentById(identifier.trim());
-      if (student != null) {
-        _verify(student.passwordHash, student.salt, password);
+    // Try as student (Student ID).
+    final student = await _db.getStudentById(cleaned);
+    if (student != null) {
+      if (DatabaseService.verifyPassword(
+          password, student.salt, student.passwordHash)) {
+        await LoginRateLimiter.instance.clear(cleaned);
         final session = Session(
           role: 'student',
           username: student.studentId,
@@ -77,20 +100,29 @@ class AuthService {
         await _sessions.save(session);
         return session;
       }
-    } catch (e) {
-      // If student login failed too, throw error
+      await _recordFailureOrThrow(cleaned);
+      throw const AuthException('Incorrect password. Please try again.');
     }
 
-    // Neither admin nor student found
+    // Neither admin nor student found.
     throw const AuthException(
       'Account not found. Please check your username or Student ID.',
     );
   }
 
-  void _verify(String storedHash, String salt, String password) {
-    if (!DatabaseService.verifyPassword(password, salt, storedHash)) {
-      throw const AuthException('Incorrect password. Please try again.');
-    }
+  /// Throws [RateLimitException] if [identifier] is currently locked.
+  Future<void> _enforceRateLimit(String identifier) async {
+    final remaining = await LoginRateLimiter.instance
+        .remainingLockSeconds(identifier);
+    if (remaining > 0) throw RateLimitException(remaining);
+  }
+
+  /// Records a failed password attempt; throws [RateLimitException] when the
+  /// attempt triggers the lock.
+  Future<void> _recordFailureOrThrow(String identifier) async {
+    final remaining = await LoginRateLimiter.instance
+        .recordFailure(identifier);
+    if (remaining > 0) throw RateLimitException(remaining);
   }
 
   Future<void> logout() => _sessions.clear();

@@ -118,20 +118,62 @@ class AdminShellState extends State<AdminShell> {
       body: IndexedStack(index: _index, children: pages),
       bottomNavigationBar: SafeArea(
         top: false,
-        minimum: const EdgeInsets.fromLTRB(14, 4, 14, 12),
-        child: GlassPanel(
-          radius: 30,
-          blur: 40,
-          strong: true,
-          borderWidth: 1,
-          showSheen: true,
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: IconButton(
-            tooltip: 'Open admin menu',
-            icon: const Icon(Icons.menu_rounded, size: 28),
-            onPressed: () => _openMenu(destinations),
-          ),
+        minimum: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            GlassPanel(
+              radius: 30,
+              blur: 30,
+              strong: true,
+              borderWidth: 1,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                tooltip: 'Open admin menu',
+                icon: _HamburgerIcon(
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                ),
+                onPressed: () => _openMenu(destinations),
+              ),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+}
+
+class _HamburgerIcon extends StatelessWidget {
+  const _HamburgerIcon({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 24,
+      height: 18,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _line(),
+          _line(),
+          _line(),
+        ],
+      ),
+    );
+  }
+
+  Widget _line() {
+    return Container(
+      width: 24,
+      height: 3,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(3),
       ),
     );
   }

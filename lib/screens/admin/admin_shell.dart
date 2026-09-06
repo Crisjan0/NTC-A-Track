@@ -123,18 +123,26 @@ class AdminShellState extends State<AdminShell> {
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            GlassPanel(
-              radius: 30,
-              blur: 30,
-              strong: true,
-              borderWidth: 1,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                      .withValues(alpha: 0.28),
+                    blurRadius: 10,
+                    spreadRadius: 1,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
               child: IconButton(
-                padding: EdgeInsets.zero,
+                padding: const EdgeInsets.all(8),
                 constraints: const BoxConstraints(),
                 tooltip: 'Open admin menu',
                 icon: _HamburgerIcon(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                  color: Theme.of(context).colorScheme.primary,
                 ),
                 onPressed: () => _openMenu(destinations),
               ),
@@ -154,8 +162,8 @@ class _HamburgerIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 24,
-      height: 18,
+      width: 32,
+      height: 22,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -169,8 +177,8 @@ class _HamburgerIcon extends StatelessWidget {
 
   Widget _line() {
     return Container(
-      width: 24,
-      height: 3,
+      width: 32,
+      height: 4,
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(3),

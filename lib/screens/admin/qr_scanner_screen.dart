@@ -12,7 +12,7 @@ import '../../utils/formatters.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/glass_panel.dart';
 import '../../widgets/gradient_header.dart';
-import '../auth/role_selection_screen.dart';
+import '../auth/login_screen.dart';
 import 'event_management_screen.dart';
 
 /// Dedicated admin QR scanner: opens the camera, decodes a student QR,
@@ -125,7 +125,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     // Defense in depth: students can never open the scanner.
     final session = SessionService.instance.current;
     if (session == null || !session.isAdmin) {
-      return const RoleSelectionScreen();
+      return const LoginScreen();
     }
 
     return Scaffold(

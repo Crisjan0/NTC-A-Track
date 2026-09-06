@@ -5,7 +5,7 @@ import '../../services/session_service.dart';
 import '../../widgets/glass_nav_bar.dart';
 import '../../widgets/glass_panel.dart';
 import '../../widgets/glass_scaffold.dart';
-import '../auth/role_selection_screen.dart';
+import '../auth/login_screen.dart';
 import 'admin_dashboard.dart';
 import 'admin_profile_screen.dart';
 import 'attendance_management_screen.dart';
@@ -65,7 +65,7 @@ class AdminShellState extends State<AdminShell> {
   Widget build(BuildContext context) {
     final session = SessionService.instance.current;
     if (session == null || !session.isAdmin) {
-      return const RoleSelectionScreen();
+      return const LoginScreen();
     }
 
     final pages = const [

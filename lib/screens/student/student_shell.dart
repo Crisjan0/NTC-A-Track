@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../services/session_service.dart';
 import '../../widgets/glass_nav_bar.dart';
 import '../../widgets/glass_scaffold.dart';
-import '../auth/role_selection_screen.dart';
+import '../auth/login_screen.dart';
 import 'my_attendance_screen.dart';
 import 'my_qr_code_screen.dart';
 import 'student_dashboard_screen.dart';
@@ -28,7 +28,7 @@ class StudentShellState extends State<StudentShell> {
     // Defense in depth: only students may enter this shell.
     final session = SessionService.instance.current;
     if (session == null || !session.isStudent) {
-      return const RoleSelectionScreen();
+      return const LoginScreen();
     }
 
     final pages = [

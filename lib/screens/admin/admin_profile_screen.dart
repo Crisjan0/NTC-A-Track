@@ -6,7 +6,7 @@ import '../../utils/app_theme.dart';
 import '../../utils/constants.dart';
 import '../../widgets/glass_panel.dart';
 import '../../widgets/gradient_header.dart';
-import '../auth/role_selection_screen.dart';
+import '../auth/login_screen.dart';
 
 /// Admin profile: account details + logout.
 class AdminProfileScreen extends StatelessWidget {
@@ -16,7 +16,7 @@ class AdminProfileScreen extends StatelessWidget {
     await AuthService.instance.logout();
     if (!context.mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,
     );
   }

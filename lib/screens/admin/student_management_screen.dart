@@ -10,6 +10,7 @@ import '../../widgets/gradient_header.dart';
 import '../../widgets/student_card.dart';
 import 'add_student_screen.dart';
 import 'edit_student_screen.dart';
+import 'import_students_screen.dart';
 import 'qr_view_screen.dart';
 
 /// Admin student management: list, search, filter, add, edit, delete.
@@ -70,6 +71,13 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
     if (added == true) _load();
   }
 
+  Future<void> _openImport() async {
+    final imported = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const ImportStudentsScreen()),
+    );
+    if (imported == true) _load();
+  }
+
   Future<void> _openEdit(Student student) async {
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => EditStudentScreen(student: student)),
@@ -126,8 +134,21 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
         children: [
           GradientHeader(
             title: 'Students',
-            subtitle: '${_students.length} ${_students.length == 1 ? 'record' : 'records'}',
+            subtitle:
+                '${_students.length} ${_students.length == 1 ? 'record' : 'records'}',
             icon: Icons.group_rounded,
+            trailing: IconButton(
+              onPressed: _openImport,
+              tooltip: 'Import students from a CSV file',
+              icon: const Icon(
+                Icons.upload_file_rounded,
+                color: Colors.white,
+                size: 22,
+              ),
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.white.withValues(alpha: 0.2),
+              ),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),

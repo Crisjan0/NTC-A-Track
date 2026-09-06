@@ -287,6 +287,11 @@ class DemoCredentials {
   static const String studentPassword = 'student123';
 }
 
+/// Password assigned to every student created via CSV import.
+/// Imported students all share this default; they can change it later
+/// (or the admin can) through the edit flow.
+const String kDefaultStudentPassword = 'northlink';
+
 class AppSpacing {
   AppSpacing._();
 

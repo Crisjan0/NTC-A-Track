@@ -11,6 +11,7 @@ import 'admin_profile_screen.dart';
 import 'attendance_management_screen.dart';
 import 'qr_scanner_screen.dart';
 import 'student_management_screen.dart';
+import 'manage_courses_screen.dart';
 import 'user_management_screen.dart';
 
 /// Admin's main scaffold: hamburger navigation across all admin pages.
@@ -71,6 +72,7 @@ class AdminShellState extends State<AdminShell> {
     final pages = const [
       AdminDashboard(),
       StudentManagementScreen(),
+      ManageCoursesScreen(),
       UserManagementScreen(),
       QrScanLandingPage(),
       AttendanceManagementScreen(),
@@ -87,6 +89,11 @@ class AdminShellState extends State<AdminShell> {
         icon: Icons.group_outlined,
         selectedIcon: Icons.group_rounded,
         label: 'Students',
+      ),
+      GlassNavDestination(
+        icon: Icons.school_outlined,
+        selectedIcon: Icons.school_rounded,
+        label: 'Courses',
       ),
       GlassNavDestination(
         icon: Icons.admin_panel_settings_outlined,

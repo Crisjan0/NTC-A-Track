@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../services/student_service.dart';
+import '../../services/course_service.dart';
 import '../../utils/constants.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/glass_panel.dart';
@@ -19,6 +20,28 @@ class AddStudentScreen extends StatefulWidget {
 class _AddStudentScreenState extends State<AddStudentScreen> {
   final _formKey = GlobalKey<StudentFormState>();
   bool _saving = false;
+  List<String> _courses = kCourses;
+  bool _coursesLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCourses();
+  }
+
+  Future<void> _loadCourses() async {
+    try {
+      final courses = await CourseService.instance.getAllCourses();
+      if (!mounted) return;
+      setState(() {
+        _courses = courses.map((c) => c.name).toList();
+        _coursesLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _coursesLoading = false);
+    }
+  }
 
   Future<void> _save() async {
     final data = _formKey.currentState?.validate();
@@ -73,9 +96,12 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
                     blur: 24,
                     strong: true,
                     padding: const EdgeInsets.all(18),
-                    child: StudentForm(
-                      key: _formKey,
-                    ),
+                    child: _coursesLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : StudentForm(
+                            key: _formKey,
+                            courseItems: _courses,
+                          ),
                   ),
                   const SizedBox(height: 20),
                   CustomButton(

@@ -21,9 +21,21 @@ class ImportStudentsScreen extends StatefulWidget {
   State<ImportStudentsScreen> createState() => _ImportStudentsScreenState();
 }
 
+/// A parsed CSV row plus whether it will be imported or skipped, and why.
+class _PreviewRow {
+  final StudentImportRow row;
+
+  /// Null = will be imported; otherwise the skip reason shown in the UI.
+  final String? skipReason;
+
+  const _PreviewRow({required this.row, this.skipReason});
+
+  bool get willImport => skipReason == null;
+}
+
 class _ImportStudentsScreenState extends State<ImportStudentsScreen> {
   String? _fileName;
-  List<StudentImportRow> _rows = [];
+  List<_PreviewRow> _preview = [];
   bool _picking = false;
   bool _downloading = false;
   bool _importing = false;
@@ -52,9 +64,17 @@ class _ImportStudentsScreenState extends State<ImportStudentsScreen> {
         return;
       }
 
+      // Flag rows that will be skipped: same Student ID twice in the file,
+      // a Student ID already in the database, or missing required fields.
+      final existingIds = (await StudentService.instance.getAllStudents())
+          .map((s) => s.studentId)
+          .toSet();
+      final preview = _buildPreview(rows, existingIds);
+      if (!mounted) return;
+
       setState(() {
         _fileName = file.name;
-        _rows = rows;
+        _preview = preview;
       });
     } catch (e) {
       if (!mounted) return;
@@ -86,10 +106,43 @@ class _ImportStudentsScreenState extends State<ImportStudentsScreen> {
     }
   }
 
+  /// Marks each row as importable or skipped (same rule as the service:
+  /// missing fields → duplicate in file → already in database).
+  List<_PreviewRow> _buildPreview(
+    List<StudentImportRow> rows,
+    Set<String> existingIds,
+  ) {
+    final preview = <_PreviewRow>[];
+    final seen = <String>{};
+    for (final row in rows) {
+      final id = row.studentId.trim();
+      String? reason;
+      if (id.isEmpty ||
+          row.firstName.trim().isEmpty ||
+          row.lastName.trim().isEmpty ||
+          row.course.trim().isEmpty ||
+          row.yearLevel.trim().isEmpty) {
+        reason = 'Missing required fields';
+      } else if (seen.contains(id)) {
+        reason = 'Duplicate Student ID in file';
+      } else if (existingIds.contains(id)) {
+        reason = 'Already in the database';
+      } else {
+        seen.add(id);
+      }
+      preview.add(_PreviewRow(row: row, skipReason: reason));
+    }
+    return preview;
+  }
+
   Future<void> _import() async {
     setState(() => _importing = true);
     try {
-      final result = await StudentService.instance.importStudents(_rows);
+      final rows = _preview
+          .where((r) => r.willImport)
+          .map((r) => r.row)
+          .toList();
+      final result = await StudentService.instance.importStudents(rows);
       if (!mounted) return;
 
       if (result.skippedCount == 0) {
@@ -189,7 +242,8 @@ class _ImportStudentsScreenState extends State<ImportStudentsScreen> {
             leading: const GlassBackButton(),
           ),
           Expanded(
-            child: _rows.isEmpty ? _buildPickState() : _buildPreviewState(),
+            child:
+                _preview.isEmpty ? _buildPickState() : _buildPreviewState(),
           ),
         ],
       ),
@@ -309,7 +363,10 @@ class _ImportStudentsScreenState extends State<ImportStudentsScreen> {
 
   Widget _buildPreviewState() {
     final p = AppTheme.paletteOf(context);
-    final count = _rows.length;
+    final count = _preview.length;
+    final importable =
+        _preview.where((r) => r.willImport).length;
+    final skipped = count - importable;
     return Column(
       children: [
         Padding(
@@ -343,8 +400,14 @@ class _ImportStudentsScreenState extends State<ImportStudentsScreen> {
                 const SizedBox(height: 4),
                 Text(
                   '$count ${count == 1 ? 'student' : 'students'} found — '
-                  'review the rows below before importing.',
+                  '$importable will be imported, $skipped skipped.',
                   style: TextStyle(fontSize: 13, color: p.textSecondary),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Rows with the same Student ID (or already in the '
+                  'database) are skipped automatically.',
+                  style: TextStyle(fontSize: 12, color: p.textSecondary),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -363,10 +426,11 @@ class _ImportStudentsScreenState extends State<ImportStudentsScreen> {
         Expanded(
           child: ListView.separated(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-            itemCount: _rows.length,
+            itemCount: _preview.length,
             separatorBuilder: (_, _) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
-              final row = _rows[index];
+              final previewRow = _preview[index];
+              final row = previewRow.row;
               return GlassPanel(
                 radius: 16,
                 blur: 16,
@@ -434,6 +498,8 @@ class _ImportStudentsScreenState extends State<ImportStudentsScreen> {
                                 color: p.textSecondary,
                               ),
                             ),
+                          const SizedBox(height: 6),
+                          _StatusChip(reason: previewRow.skipReason),
                         ],
                       ),
                     ),
@@ -446,13 +512,67 @@ class _ImportStudentsScreenState extends State<ImportStudentsScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
           child: CustomButton(
-            label: count == 1 ? 'Import 1 student' : 'Import $count students',
+            label: importable == 0
+                ? 'Nothing to import'
+                : importable == 1
+                    ? 'Import 1 student'
+                    : 'Import $importable students',
             icon: Icons.check_circle_outline_rounded,
             loading: _importing,
-            onPressed: _importing ? null : _import,
+            onPressed: _importing || importable == 0 ? null : _import,
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Small status badge shown on each preview row: "Will be imported" in green,
+/// or the skip reason in amber/red.
+class _StatusChip extends StatelessWidget {
+  final String? reason;
+
+  const _StatusChip({this.reason});
+
+  @override
+  Widget build(BuildContext context) {
+    final isMissing = reason == 'Missing required fields';
+    final color = reason == null
+        ? AppColors.success
+        : isMissing
+            ? AppColors.danger
+            : AppColors.warning;
+    final icon = reason == null
+        ? Icons.check_circle_rounded
+        : isMissing
+            ? Icons.error_outline_rounded
+            : Icons.info_outline_rounded;
+    final label = reason ?? 'Will be imported';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

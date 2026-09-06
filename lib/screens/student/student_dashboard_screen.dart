@@ -11,7 +11,6 @@ import '../../widgets/dashboard_card.dart';
 import '../../widgets/glass_panel.dart';
 import '../../widgets/gradient_header.dart';
 import '../../widgets/section_title.dart';
-import 'student_shell.dart';
 
 /// Student dashboard: welcome, personal info and attendance summary.
 class StudentDashboardScreen extends StatefulWidget {
@@ -207,30 +206,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
-                    const SectionTitle(title: 'Quick Access'),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _QuickAction(
-                            icon: Icons.qr_code_2_rounded,
-                            label: 'My QR Code',
-                            gradient: AppGradients.primary,
-                            onTap: () => _switchTab(1),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _QuickAction(
-                            icon: Icons.event_note_rounded,
-                            label: 'My Attendance',
-                            gradient: AppGradients.orange,
-                            onTap: () => _switchTab(2),
-                          ),
-                        ),
-                      ],
-                    ),
                   ],
                 ],
               ),
@@ -242,9 +217,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     );
   }
 
-  void _switchTab(int index) {
-    context.findAncestorStateOfType<StudentShellState>()?.switchTo(index);
-  }
 }
 
 class _InfoLine extends StatelessWidget {
@@ -282,55 +254,4 @@ class _InfoLine extends StatelessWidget {
   }
 }
 
-class _QuickAction extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final LinearGradient gradient;
-  final VoidCallback onTap;
 
-  const _QuickAction({
-    required this.icon,
-    required this.label,
-    required this.gradient,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final p = AppTheme.paletteOf(context);
-    return GlassPanel(
-      radius: 16,
-      blur: 18,
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              gradient: gradient,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.2),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Icon(icon, color: Colors.white, size: 22),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: p.textPrimary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

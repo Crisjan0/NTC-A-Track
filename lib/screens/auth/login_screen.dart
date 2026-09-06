@@ -105,16 +105,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
                               color: const Color(0xFFF2F2F2),
-                              borderRadius: BorderRadius.circular(18),
+                              borderRadius: BorderRadius.circular(100),
                               border: Border.all(color: const Color(0xFFE0E0E0)),
                             ),
                             child: Image.asset(
                               'assets/icon/ntc-icon.png',
-                              width: 68,
-                              height: 68,
+                              width: 150,
+                              height: 150,
                             ),
                           ),
                           const SizedBox(height: 16),

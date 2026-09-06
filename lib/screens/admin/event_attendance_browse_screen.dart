@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+import 'package:csv/csv.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/attendance_model.dart';
@@ -5,6 +9,7 @@ import '../../models/event_model.dart';
 import '../../services/attendance_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/constants.dart';
+import '../../utils/formatters.dart';
 import '../../widgets/attendance_card.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/glass_panel.dart';
@@ -35,6 +40,7 @@ class _EventAttendanceBrowseScreenState
   Map<String, int>? _courseCounts;
   String? _course;
   List<Attendance>? _records;
+  bool _exporting = false;
 
   @override
   void initState() {
@@ -76,6 +82,74 @@ class _EventAttendanceBrowseScreenState
     );
     if (!mounted) return;
     setState(() => _records = records);
+  }
+
+  Future<void> _downloadEventAttendance() async {
+    final event = _event;
+    if (event?.id == null || _exporting) return;
+
+    setState(() => _exporting = true);
+    try {
+      final records = await _service.queryAttendance(eventId: event!.id);
+      if (records.isEmpty) {
+        if (mounted) _showMessage('No attendance records to download yet.');
+        return;
+      }
+
+      final rows = <List<String>>[
+        [
+          'Event',
+          'Student ID',
+          'Student Name',
+          'Course',
+          'Year Level',
+          'Date',
+          'Time',
+          'Check Type',
+          'Status',
+        ],
+        for (final record in records)
+          [
+            event.name,
+            record.studentId,
+            record.studentName ?? '',
+            record.course ?? '',
+            record.yearLevel ?? '',
+            Formatters.dbDate(record.date),
+            Formatters.time(record.time),
+            record.checkType,
+            record.status,
+          ],
+      ];
+
+      final fileName = '${_safeFileName(event.name)}_attendance.csv';
+      final path = await FilePicker.saveFile(
+        dialogTitle: 'Download event attendance',
+        fileName: fileName,
+        bytes: utf8.encode('\uFEFF${csv.encode(rows)}'),
+        type: FileType.custom,
+        allowedExtensions: ['csv'],
+        mimeType: 'text/csv',
+      );
+      if (path != null && mounted) {
+        _showMessage('${records.length} attendance records downloaded.');
+      }
+    } catch (_) {
+      if (mounted) _showMessage('Could not download the attendance report.');
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  String _safeFileName(String name) {
+    final safe = name.replaceAll(RegExp(r'[^a-zA-Z0-9_-]+'), '_');
+    return safe.isEmpty ? 'event' : safe;
   }
 
   bool get _canPop => _event == null && _course == null;
@@ -134,6 +208,26 @@ class _EventAttendanceBrowseScreenState
               ),
               trailing: _course != null
                   ? null
+                  : _event != null
+                      ? IconButton(
+                          tooltip: 'Download attendance CSV',
+                          onPressed: _exporting ? null : _downloadEventAttendance,
+                          icon: _exporting
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.download_rounded,
+                                  color: Colors.white),
+                          style: IconButton.styleFrom(
+                            backgroundColor:
+                                Colors.white.withValues(alpha: 0.15),
+                          ),
+                        )
                   : IconButton(
                       onPressed: _loadEvents,
                       icon: const Icon(Icons.refresh_rounded,

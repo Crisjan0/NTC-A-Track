@@ -284,7 +284,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: Transform.translate(
+      offset: const Offset(0, -40),
+      child: FloatingActionButton.extended(
         onPressed: _openAdd,
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
@@ -294,6 +296,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
+    ),
     );
   }
 }

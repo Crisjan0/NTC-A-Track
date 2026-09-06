@@ -236,14 +236,17 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openAdd,
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.person_add_alt_1_rounded),
-        label: const Text(
-          'Add Student',
-          style: TextStyle(fontWeight: FontWeight.w700),
+      floatingActionButton: Transform.translate(
+        offset: const Offset(0, -40),
+        child: FloatingActionButton.extended(
+          onPressed: _openAdd,
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          icon: const Icon(Icons.person_add_alt_1_rounded),
+          label: const Text(
+            'Add Student',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
         ),
       ),
     );

@@ -12,7 +12,7 @@ import '../../utils/formatters.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/glass_panel.dart';
 import '../../widgets/gradient_header.dart';
-import '../auth/role_selection_screen.dart';
+import '../auth/login_screen.dart';
 import 'event_management_screen.dart';
 
 /// Dedicated admin QR scanner: opens the camera, decodes a student QR,
@@ -104,14 +104,14 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     await _controller.stop();
     if (!mounted) return;
     try {
-      final id = await _promptStudentId(context);
-      if (id == null || id.trim().isEmpty) return;
-      final result = await AttendanceService.instance.recordFromScan(
-        id,
-        checkType: _checkType,
+      final result = await _promptStudentIdAndCheckType(context, _activeEvent);
+      if (result.id == null || result.id!.trim().isEmpty) return;
+      final attendanceResult = await AttendanceService.instance.recordFromScan(
+        result.id!,
+        checkType: result.checkType,
       );
       if (!mounted) return;
-      await _showResultDialog(result);
+      await _showResultDialog(attendanceResult);
     } finally {
       if (mounted) {
         _handling = false;
@@ -125,7 +125,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     // Defense in depth: students can never open the scanner.
     final session = SessionService.instance.current;
     if (session == null || !session.isAdmin) {
-      return const RoleSelectionScreen();
+      return const LoginScreen();
     }
 
     return Scaffold(
@@ -320,38 +320,112 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
 
 /// Dialog asking the admin to type a student ID (fallback when the camera
 /// cannot scan). Returns the trimmed ID, or null if cancelled.
-Future<String?> _promptStudentId(BuildContext context) {
-  final controller = TextEditingController();
-  return showDialog<String>(
+/// Prompts for a student ID and, if [activeEvent] uses Time In/Out,
+/// also lets the admin choose AM/PM and Time In / Time Out.
+Future<_ManualEntryResult> _promptStudentIdAndCheckType(
+  BuildContext context,
+  AttendanceEvent? activeEvent,
+) async {
+  final idController = TextEditingController();
+  String session = 'AM';
+  bool isIn = true;
+
+  final usesTimeInOut = activeEvent?.usesTimeInOut ?? false;
+
+  final result = await showDialog<_ManualEntryResult>(
     context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('Enter Student ID'),
-      content: TextField(
-        controller: controller,
-        autofocus: true,
-        keyboardType: TextInputType.number,
-        decoration: const InputDecoration(
-          hintText: 'e.g. 2026-0001',
-          prefixIcon: Icon(Icons.badge_rounded),
+    builder: (ctx) => StatefulBuilder(
+      builder: (context, setDialogState) => AlertDialog(
+        title: Text(
+          activeEvent != null
+              ? 'Enter Student ID · ${activeEvent.name}'
+              : 'Enter Student ID',
         ),
-        onSubmitted: (value) => Navigator.of(ctx).pop(value),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(ctx).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(ctx).pop(controller.text),
-          style: FilledButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: idController,
+                autofocus: true,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  hintText: 'e.g. 2026-0001',
+                  prefixIcon: Icon(Icons.badge_rounded),
+                ),
+                onSubmitted: (_) => Navigator.of(ctx).pop(
+                  _ManualEntryResult(
+                    id: idController.text.trim(),
+                    checkType: _checkTypeFor(session, isIn, usesTimeInOut),
+                  ),
+                ),
+              ),
+              if (usesTimeInOut) ...[
+                const SizedBox(height: 16),
+                Text(
+                  'Session & Check Type',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.paletteOf(ctx).textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _ToggleRow(
+                  options: const ['AM', 'PM'],
+                  selected: session,
+                  onSelect: (value) => setDialogState(() => session = value),
+                ),
+                const SizedBox(height: 8),
+                _ToggleRow(
+                  options: const ['Time In', 'Time Out'],
+                  selected: isIn ? 'Time In' : 'Time Out',
+                  onSelect: (value) =>
+                      setDialogState(() => isIn = value == 'Time In'),
+                ),
+              ],
+              if (activeEvent != null && !usesTimeInOut) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'This event uses one-time attendance. No AM/PM selection needed.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.paletteOf(ctx).textSecondary,
+                  ),
+                ),
+              ],
+            ],
           ),
-          child: const Text('Record'),
         ),
-      ],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(
+              _ManualEntryResult(
+                id: idController.text.trim(),
+                checkType: _checkTypeFor(session, isIn, usesTimeInOut),
+              ),
+            ),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary,
+            ),
+            child: const Text('Record'),
+          ),
+        ],
+      ),
     ),
   );
+  return result ?? const _ManualEntryResult();
+}
+
+String? _checkTypeFor(String session, bool isIn, bool usesTimeInOut) {
+  if (!usesTimeInOut) return null;
+  return '${session}_${isIn ? 'IN' : 'OUT'}';
 }
 
 /// Semi-transparent mask + corner brackets around the scan window.
@@ -916,15 +990,18 @@ class _QrScanLandingPageState extends State<QrScanLandingPage> {
 
   /// Fallback when the camera cannot read the QR: type the student ID.
   Future<void> _manualEntry() async {
-    final id = await _promptStudentId(context);
-    if (id == null || id.trim().isEmpty) return;
-    final result = await AttendanceService.instance.recordFromScan(id);
+    final result = await _promptStudentIdAndCheckType(context, _activeEvent);
+    if (result.id == null || result.id!.trim().isEmpty) return;
+    final attendanceResult = await AttendanceService.instance.recordFromScan(
+      result.id!,
+      checkType: result.checkType,
+    );
     if (!mounted) return;
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => _ScanResultDialog(
-        result: result,
+        result: attendanceResult,
         onClose: () => Navigator.of(ctx).pop(),
       ),
     );
@@ -1176,8 +1253,7 @@ class _StepRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          Icon(icon, size: 20, color: scheme.primary),
-          const SizedBox(width: 10),
+          Icon(icon, size: 20, color: scheme.primary),          const SizedBox(width: 10),
           Expanded(
             child: Text(
               text,
@@ -1192,4 +1268,11 @@ class _StepRow extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ManualEntryResult {
+  final String? id;
+  final String? checkType;
+
+  const _ManualEntryResult({this.id, this.checkType});
 }

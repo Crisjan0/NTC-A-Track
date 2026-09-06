@@ -9,48 +9,48 @@ import 'constants.dart';
 class AppTheme {
   AppTheme._();
 
-  static GlassPalette paletteOf(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-          ? GlassPalette.dark
-          : GlassPalette.light;
+  /// FIXED PALETTE - Always uses the same minimalist grayscale colors
+  static GlassPalette paletteOf(BuildContext context) => GlassPalette.fixed;
 
-  static ThemeData get light => _build(GlassPalette.light);
+  /// FIXED THEME - Always uses minimalist grayscale (never changes)
+  static ThemeData get light => _build(GlassPalette.fixed);
 
-  static ThemeData get dark => _build(GlassPalette.dark);
+  /// FIXED THEME - Always uses minimalist grayscale (never changes)
+  static ThemeData get dark => _build(GlassPalette.fixed);
 
   static ThemeData _build(GlassPalette p) {
-    final primary = p.isDark ? BrandNavy.c400 : AppColors.primary;
-    final onPrimary = p.isDark ? BrandNavy.c950 : Colors.white;
+    // FIXED MINIMALIST COLORS - Never changes based on system theme
+    final primary = AppColors.primary;  // Fixed gray
+    final onPrimary = Colors.white;  // Fixed white text
     final scheme = ColorScheme.fromSeed(
-      seedColor: AppColors.primary,
-      brightness: p.brightness,
+      seedColor: primary,
+      brightness: Brightness.light,  // Fixed to light
       primary: primary,
       onPrimary: onPrimary,
-      primaryContainer: p.primaryContainer,
-      onPrimaryContainer: p.onPrimaryContainer,
-          secondary: p.isDark ? BrandNavy.c300 : AppColors.orange,
-          onSecondary: p.isDark ? BrandNavy.c950 : Colors.white,
-      secondaryContainer:
-            p.isDark ? BrandNavy.c800 : AppColors.orangeLight,
-      onSecondaryContainer:
-            p.isDark ? BrandNavy.c100 : AppColors.orange,
-          surface: p.isDark ? BrandNavy.c900 : Colors.white,
+      primaryContainer: BrandNavy.c100,
+      onPrimaryContainer: BrandNavy.c900,
+      secondary: AppColors.orange,  // Fixed gray
+      onSecondary: Colors.white,  // Fixed white
+      secondaryContainer: BrandNavy.c200,
+      onSecondaryContainer: BrandNavy.c900,
+      surface: Colors.white,  // Fixed white
       error: AppColors.danger,
-      onSurface: p.textPrimary,
-      onSurfaceVariant: p.textSecondary,
-      outline: p.borderStroke,
-      scrim: p.scrim,
+      onSurface: Color(0xFF1A1A1A),  // Fixed dark text
+      onSurfaceVariant: Color(0xFF666666),  // Fixed medium gray
+      outline: Color(0xFFCCCCCC),  // Fixed light gray
+      scrim: Color(0x33000000),  // Fixed scrim
     );
 
     final base = ThemeData(
       useMaterial3: true,
-      brightness: p.brightness,
+      brightness: Brightness.light,  // Fixed to light
       colorScheme: scheme,
-      scaffoldBackgroundColor: Colors.transparent,
+      scaffoldBackgroundColor: Colors.white,  // Fixed white background
     );
 
-    final textPrimary = p.textPrimary;
-    final textSecondary = p.textSecondary;
+    // FIXED TEXT COLORS
+    const Color textPrimary = Color(0xFF1A1A1A);  // Fixed dark gray
+    const Color textSecondary = Color(0xFF666666);  // Fixed medium gray
 
     return base.copyWith(
       textTheme: base.textTheme.copyWith(
@@ -93,30 +93,26 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
-        backgroundColor: Colors.transparent,
+        backgroundColor: Colors.white,  // Fixed white
         foregroundColor: textPrimary,
-        systemOverlayStyle: p.isDark
-            ? SystemUiOverlayStyle.light
-            : SystemUiOverlayStyle.dark,
+        systemOverlayStyle: SystemUiOverlayStyle.dark,  // Fixed dark icons
         titleTextStyle: base.textTheme.titleLarge?.copyWith(
           fontWeight: FontWeight.w800,
           color: textPrimary,
         ),
       ),
-      // Card widgets get the frosted treatment via CardTheme-free GlassPanel
-      // usage; this keeps theme-only Cards coherent too.
       cardTheme: CardThemeData(
         elevation: 0,
-        color: p.glassFill,
+        color: Color(0xFFF5F5F5),  // Fixed light gray
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(kCardRadius),
-          side: BorderSide(color: p.borderStroke, width: 1),
+          side: BorderSide(color: Color(0xFFCCCCCC), width: 1),  // Fixed border
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: p.glassFillSoft,
+        fillColor: Color(0xFFFAFAFA),  // Fixed very light gray
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         hintStyle: TextStyle(color: textSecondary),
@@ -125,31 +121,31 @@ class AppTheme {
         labelStyle: TextStyle(color: textSecondary, fontWeight: FontWeight.w600),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(kFieldRadius),
-          borderSide: BorderSide(color: p.borderStroke, width: 1.2),
+          borderSide: BorderSide(color: Color(0xFFCCCCCC), width: 1.2),  // Fixed
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(kFieldRadius),
-          borderSide: BorderSide(color: p.borderStroke, width: 1.2),
+          borderSide: BorderSide(color: Color(0xFFCCCCCC), width: 1.2),  // Fixed
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(kFieldRadius),
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.8),
+          borderSide: BorderSide(color: AppColors.primary, width: 1.8),  // Fixed primary
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(kFieldRadius),
-          borderSide: const BorderSide(color: AppColors.danger),
+          borderSide: const BorderSide(color: AppColors.danger),  // Fixed danger
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(kFieldRadius),
-          borderSide: const BorderSide(color: AppColors.danger, width: 1.8),
+          borderSide: const BorderSide(color: AppColors.danger, width: 1.8),  // Fixed
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           elevation: 0,
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          minimumSize: const Size.fromHeight(52),
+          backgroundColor: Color(0xFF666666),  // Fixed dark gray button
+          foregroundColor: Colors.white,  // Fixed white text
+          minimumSize: const Size.fromHeight(36),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(kButtonRadius),
           ),
@@ -163,9 +159,9 @@ class AppTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           elevation: 0,
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          minimumSize: const Size.fromHeight(52),
+          backgroundColor: Color(0xFF666666),  // Fixed dark gray button
+          foregroundColor: Colors.white,  // Fixed white text
+          minimumSize: const Size.fromHeight(36),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(kButtonRadius),
           ),
@@ -178,9 +174,9 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size.fromHeight(52),
-          foregroundColor: scheme.primary,
-          side: BorderSide(color: p.borderStroke),
+          minimumSize: const Size.fromHeight(36),
+          foregroundColor: Color(0xFF666666),  // Fixed dark gray text
+          side: BorderSide(color: Color(0xFFCCCCCC)),  // Fixed border
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(kButtonRadius),
           ),
@@ -192,16 +188,16 @@ class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: scheme.primary,
+          foregroundColor: Color(0xFF666666),  // Fixed dark gray text
           textStyle: const TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
       chipTheme: base.chipTheme.copyWith(
-        backgroundColor: p.glassFillSoft,
+        backgroundColor: Color(0xFFEEEEEE),  // Fixed light gray
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
-        side: BorderSide(color: p.borderStroke),
+        side: BorderSide(color: Color(0xFFCCCCCC)),  // Fixed border
         labelStyle: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w600,
@@ -210,18 +206,16 @@ class AppTheme {
         secondaryLabelStyle: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w600,
-          color: scheme.primary,
+          color: Color(0xFF666666),  // Fixed dark gray
         ),
-        selectedColor: p.primaryContainer,
-        checkmarkColor: p.onPrimaryContainer,
+        selectedColor: Color(0xFFDDDDDD),  // Fixed selected gray
+        checkmarkColor: Color(0xFF333333),  // Fixed dark checkmark
       ),
       navigationBarTheme: NavigationBarThemeData(
         elevation: 0,
         height: 72,
-        backgroundColor: p.glassFillStrong,
-        indicatorColor: p.isDark
-            ? Colors.white.withValues(alpha: 0.16)
-            : Colors.white,
+        backgroundColor: Color(0xFFFAFAFA),  // Fixed very light gray
+        indicatorColor: Color(0xFFEEEEEE),  // Fixed light gray
         indicatorShape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
         ),
@@ -235,7 +229,7 @@ class AppTheme {
         iconTheme: WidgetStateProperty.resolveWith(
           (states) => IconThemeData(
             color: states.contains(WidgetState.selected)
-                ? scheme.primary
+                ? Color(0xFF666666)  // Fixed selected gray
                 : textSecondary,
             size: 24,
           ),
@@ -244,15 +238,13 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
       ),
       dividerTheme: DividerThemeData(
-        color: p.isDark
-            ? Colors.white.withValues(alpha: 0.10)
-            : Colors.black.withValues(alpha: 0.06),
+        color: Color(0xFFCCCCCC),  // Fixed light gray
         thickness: 1,
         space: 1,
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: p.isDark ? BrandNavy.c950 : textPrimary,
+        backgroundColor: Color(0xFF333333),  // Fixed dark gray
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
         ),
@@ -262,10 +254,10 @@ class AppTheme {
         ),
       ),
       dialogTheme: DialogThemeData(
-        backgroundColor: p.glassFillStrong,
+        backgroundColor: Color(0xFFFAFAFA),  // Fixed very light gray
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(26),
-          side: BorderSide(color: p.borderStroke),
+          side: BorderSide(color: Color(0xFFCCCCCC)),  // Fixed border
         ),
         titleTextStyle: TextStyle(
           fontSize: 20,
@@ -274,8 +266,8 @@ class AppTheme {
         ),
       ),
       bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: p.glassFillStrong,
-        modalBackgroundColor: p.glassFillStrong,
+        backgroundColor: Color(0xFFFAFAFA),  // Fixed very light gray
+        modalBackgroundColor: Color(0xFFFAFAFA),  // Fixed
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
@@ -283,9 +275,9 @@ class AppTheme {
         dragHandleColor: textSecondary,
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(
-        color: scheme.primary,
-        linearTrackColor: p.primaryContainer,
-        circularTrackColor: p.primaryContainer,
+        color: Color(0xFF666666),  // Fixed dark gray
+        linearTrackColor: Color(0xFFE0E0E0),  // Fixed light gray
+        circularTrackColor: Color(0xFFE0E0E0),  // Fixed light gray
       ),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith(
@@ -296,16 +288,12 @@ class AppTheme {
         trackColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
               ? AppColors.switchGreen
-              : p.isDark
-                  ? Colors.white.withValues(alpha: 0.25)
-                  : Colors.white.withValues(alpha: 0.6),
+              : Colors.white.withValues(alpha: 0.6),  // Fixed
         ),
         trackOutlineColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
               ? AppColors.switchGreen
-              : p.isDark
-                  ? Colors.white.withValues(alpha: 0.3)
-                  : Colors.black.withValues(alpha: 0.15),
+              : Colors.black.withValues(alpha: 0.15),  // Fixed
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(

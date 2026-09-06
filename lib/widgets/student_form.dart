@@ -30,6 +30,8 @@ class StudentForm extends StatefulWidget {
   final bool showPassword;
   final String passwordLabel;
   final String passwordHint;
+  /// Optional list of courses for the dropdown. When null, uses [kCourses].
+  final List<String>? courseItems;
 
   const StudentForm({
     super.key,
@@ -37,6 +39,7 @@ class StudentForm extends StatefulWidget {
     this.showPassword = true,
     this.passwordLabel = 'Password',
     this.passwordHint = 'Minimum 6 characters',
+    this.courseItems,
   });
 
   @override
@@ -140,7 +143,7 @@ class StudentFormState extends State<StudentForm> {
               labelText: 'Course',
               prefixIcon: Icon(Icons.menu_book_rounded),
             ),
-            items: kCourses
+            items: (widget.courseItems ?? kCourses)
                 .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                 .toList(),
             onChanged: (v) => setState(() => _course = v),

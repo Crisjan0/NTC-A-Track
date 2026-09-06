@@ -10,6 +10,7 @@ class CustomButton extends StatelessWidget {
   final bool loading;
   final IconData? icon;
   final LinearGradient? gradient;
+  final double? width;  // Optional width control
 
   const CustomButton({
     super.key,
@@ -18,14 +19,16 @@ class CustomButton extends StatelessWidget {
     this.loading = false,
     this.icon,
     this.gradient,
+    this.width,  // Default to null for auto-sizing
   });
 
   @override
   Widget build(BuildContext context) {
     final enabled = onPressed != null && !loading;
-    return SizedBox(
-      width: double.infinity,
-      height: 54,
+    return Center(
+      child: SizedBox(
+        width: width ?? double.infinity,
+        height: 48,
       child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: gradient ?? AppGradients.primary,
@@ -97,6 +100,7 @@ class CustomButton extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }

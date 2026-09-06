@@ -6,6 +6,7 @@ import 'package:sqflite/sqflite.dart';
 import '../models/attendance_model.dart';
 import '../models/event_model.dart';
 import '../models/student_model.dart';
+import '../models/course_model.dart';
 import '../models/user_model.dart';
 import '../utils/constants.dart';
 import '../utils/formatters.dart';
@@ -60,7 +61,7 @@ class DatabaseService {
         p.join(await getDatabasesPath(), dbName);
     return openDatabase(
       path,
-      version: 3,
+      version: 4,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -74,6 +75,9 @@ class DatabaseService {
         }
         if (oldVersion < 3) {
           await _migrateToV3(db);
+        }
+        if (oldVersion < 4) {
+          await _migrateToV4(db);
         }
       },
     );
@@ -105,12 +109,23 @@ class DatabaseService {
       )
     ''');
 
+    await _createCoursesTable(db);
     await _createEventsTable(db);
     await _createAttendanceTable(db);
 
     await db.execute(
       'CREATE INDEX idx_attendance_date ON $kAttendanceTable (date)',
     );
+  }
+
+  Future<void> _createCoursesTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE courses (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_name TEXT NOT NULL UNIQUE,
+        created_at TEXT NOT NULL
+      )
+    ''');
   }
 
   Future<void> _createEventsTable(Database db) async {
@@ -233,8 +248,19 @@ class DatabaseService {
     );
   }
 
+  /// v3 -> v4: add courses table if it does not exist.
+  Future<void> _migrateToV4(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS courses (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_name TEXT NOT NULL UNIQUE,
+        created_at TEXT NOT NULL
+      )
+    ''');
+  }
+
   /// Seeds demo data on first launch so the app is usable immediately:
-  /// an admin account, five students, a default active event, and
+  /// an admin account, default courses, five students, a default active event, and
   /// attendance history for this week.
   Future<void> _seed(Database db) async {
     final adminHash = hashPassword(DemoCredentials.adminPassword, salt: null);
@@ -245,6 +271,18 @@ class DatabaseService {
       'role': 'admin',
       'created_at': DateTime.now().toIso8601String(),
     });
+
+    // Seed default courses (idempotent via UNIQUE constraint).
+    for (final courseName in kCourses) {
+      try {
+        await db.insert('courses', {
+          'course_name': courseName,
+          'created_at': DateTime.now().toIso8601String(),
+        });
+      } catch (_) {
+        // Ignore duplicates: course already seeded.
+      }
+    }
 
     final demoStudents = [
       ('2026-0001', 'Dela Cruz', 'Juan', kCourses[0], kYearLevels[1]),
@@ -372,6 +410,85 @@ class DatabaseService {
       limit: 1,
     );
     return rows.isEmpty ? null : User.fromMap(rows.first);
+  }
+
+  /// All admin accounts, newest first.
+  Future<List<User>> getAllUsers() async {
+    final db = await database;
+    final rows = await db.query(
+      kUsersTable,
+      orderBy: 'created_at DESC',
+    );
+    return rows.map(User.fromMap).toList();
+  }
+
+  /// Update an existing admin's password. Returns the new salt + hash map so
+  /// callers can also update their own in-memory copy.
+  Future<Map<String, String>> updateUserPassword(
+    int userId,
+    String plainPassword,
+  ) async {
+    final creds = hashPassword(plainPassword);
+    await database.then((db) => db.update(
+      kUsersTable,
+      {
+        'password_hash': creds['hash'],
+        'salt': creds['salt'],
+      },
+      where: 'id = ?',
+      whereArgs: [userId],
+    ));
+    return creds;
+  }
+
+  /// Update an existing admin account's metadata (username and/or role).
+  /// Usernames are unique, so a collision with another account is rejected.
+  Future<bool> updateUser(
+    User user,
+    {String? newUsername,
+    String? newRole,
+  }) async {
+    final db = await database;
+    if (newUsername != null && newUsername.trim().isNotEmpty) {
+      final collision = await db.query(
+        kUsersTable,
+        columns: ['id'],
+        where: 'username = ? AND id != ?',
+        whereArgs: [newUsername.trim(), user.id],
+        limit: 1,
+      );
+      if (collision.isNotEmpty) return false;
+    }
+
+    await db.update(
+      kUsersTable,
+      {
+        if (newUsername != null && newUsername.trim().isNotEmpty)
+          'username': newUsername.trim(),
+        if (newRole != null && newRole.trim().isNotEmpty)
+          'role': newRole.trim(),
+      },
+      where: 'id = ?',
+      whereArgs: [user.id],
+    );
+    return true;
+  }
+
+  /// Deletes an admin account. The caller is responsible for preventing an
+  /// admin from deleting their own account (caller supplies [currentUserId]).
+  Future<bool> deleteUser(int userId, {int? currentUserId}) async {
+    if (currentUserId == userId) return false;
+    final db = await database;
+    final rows = await db.query(
+      kUsersTable,
+      columns: ['id'],
+      where: 'id = ?',
+      whereArgs: [userId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return false;
+    await db.delete(kUsersTable, where: 'id = ?', whereArgs: [userId]);
+    return true;
   }
 
   Future<Student?> getStudentById(String studentId) async {
@@ -606,6 +723,53 @@ class DatabaseService {
     await db.update(
       kEventsTable,
       {'is_active': 1},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // ----------------------------------------------------------- courses
+
+  Future<List<Course>> getAllCourses() async {
+    final db = await database;
+    final rows = await db.query(
+      'courses',
+      orderBy: 'course_name ASC',
+    );
+    return rows.map(Course.fromMap).toList();
+  }
+
+  Future<bool> courseNameExists(String courseName) async {
+    final db = await database;
+    final rows = await db.query(
+      'courses',
+      columns: ['id'],
+      where: 'course_name = ?',
+      whereArgs: [courseName.trim()],
+      limit: 1,
+    );
+    return rows.isNotEmpty;
+  }
+
+  Future<int> insertCourse(Course course) async {
+    final db = await database;
+    return db.insert('courses', course.toMap());
+  }
+
+  Future<int> updateCourse(Course course) async {
+    final db = await database;
+    return db.update(
+      'courses',
+      course.toMap(),
+      where: 'id = ?',
+      whereArgs: [course.id],
+    );
+  }
+
+  Future<int> deleteCourse(int id) async {
+    final db = await database;
+    return db.delete(
+      'courses',
       where: 'id = ?',
       whereArgs: [id],
     );

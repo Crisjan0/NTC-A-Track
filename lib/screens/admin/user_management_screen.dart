@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../models/user_model.dart';
 import '../../utils/formatters.dart';
-import '../../services/database_service.dart';
+import '../../services/database_service_factory.dart';
+import '../../services/database_service_interface.dart';
 import '../../services/session_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/constants.dart';
@@ -22,7 +23,7 @@ class UserManagementScreen extends StatefulWidget {
 }
 
 class _UserManagementScreenState extends State<UserManagementScreen> {
-  final DatabaseService _db = DatabaseService.instance;
+  final DatabaseServiceInterface _db = DatabaseServiceFactory.instance;
   final _searchController = TextEditingController();
 
   List<User> _users = [];

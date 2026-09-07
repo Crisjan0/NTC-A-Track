@@ -35,7 +35,7 @@ class _AttendanceManagementScreenState
   String? _course;
   String? _yearLevel;
   String? _status;
-  int? _eventId;
+  String? _eventId;
 
   @override
   void initState() {

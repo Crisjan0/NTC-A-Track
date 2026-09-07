@@ -3,7 +3,7 @@
 /// For the local demo, each student also carries their own credentials
 /// (password hash + salt) so they can log in independently.
 class Student {
-  final int? id;
+  final String? id;
   final String studentId;
   final String lastName;
   final String firstName;
@@ -35,7 +35,7 @@ class Student {
   }
 
   factory Student.fromMap(Map<String, dynamic> map) => Student(
-        id: map['id'] as int?,
+        id: map['id'] as String?,
         studentId: map['student_id'] as String,
         lastName: map['last_name'] as String,
         firstName: map['first_name'] as String,

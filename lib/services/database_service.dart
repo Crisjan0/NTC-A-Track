@@ -1,4 +1,3 @@
-import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
@@ -10,6 +9,8 @@ import '../models/course_model.dart';
 import '../models/user_model.dart';
 import '../utils/constants.dart';
 import '../utils/formatters.dart';
+import '../utils/password_hash.dart';
+import 'database_service_interface.dart';
 
 /// Local SQLite database (demo-friendly — no server required).
 ///
@@ -20,7 +21,7 @@ import '../utils/formatters.dart';
 ///    active at a time and QR scans are recorded to it
 ///  - [kAttendanceTable]: one record per student per day per event (UNIQUE
 ///    constraint prevents duplicate attendance at the database level)
-class DatabaseService {
+class DatabaseService implements DatabaseServiceInterface {
   DatabaseService._();
 
   static final DatabaseService instance = DatabaseService._();
@@ -382,21 +383,12 @@ class DatabaseService {
     String password, {
     String? salt,
   }) {
-    final effectiveSalt = salt ?? _randomSalt();
-    final hash = sha256.convert('$effectiveSalt:$password'.codeUnits);
-    return {'salt': effectiveSalt, 'hash': hash.toString()};
-  }
-
-  static String _randomSalt() {
-    final random = DateTime.now().microsecondsSinceEpoch;
-    return '$random-${sha256.convert('$random'.codeUnits)}'
-        .substring(0, 16);
+    return PasswordHash.hash(password, salt: salt);
   }
 
   /// Verifies a plain-text password against a stored hash + salt.
   static bool verifyPassword(String password, String salt, String hash) {
-    final candidate = sha256.convert('$salt:$password'.codeUnits).toString();
-    return candidate == hash;
+    return PasswordHash.verify(password, salt, hash);
   }
 
   // ---------------------------------------------------------------- queries
@@ -422,10 +414,17 @@ class DatabaseService {
     return rows.map(User.fromMap).toList();
   }
 
+  /// Inserts a new admin user. Returns the new user's ID.
+  Future<String> insertUser(User user) async {
+    final db = await database;
+    final id = await db.insert(kUsersTable, user.toMap());
+    return id.toString();
+  }
+
   /// Update an existing admin's password. Returns the new salt + hash map so
   /// callers can also update their own in-memory copy.
   Future<Map<String, String>> updateUserPassword(
-    int userId,
+    String userId,
     String plainPassword,
   ) async {
     final creds = hashPassword(plainPassword);
@@ -436,7 +435,7 @@ class DatabaseService {
         'salt': creds['salt'],
       },
       where: 'id = ?',
-      whereArgs: [userId],
+      whereArgs: [int.parse(userId)],
     ));
     return creds;
   }
@@ -476,18 +475,18 @@ class DatabaseService {
 
   /// Deletes an admin account. The caller is responsible for preventing an
   /// admin from deleting their own account (caller supplies [currentUserId]).
-  Future<bool> deleteUser(int userId, {int? currentUserId}) async {
+  Future<bool> deleteUser(String userId, {String? currentUserId}) async {
     if (currentUserId == userId) return false;
     final db = await database;
     final rows = await db.query(
       kUsersTable,
       columns: ['id'],
       where: 'id = ?',
-      whereArgs: [userId],
+      whereArgs: [int.parse(userId)],
       limit: 1,
     );
     if (rows.isEmpty) return false;
-    await db.delete(kUsersTable, where: 'id = ?', whereArgs: [userId]);
+    await db.delete(kUsersTable, where: 'id = ?', whereArgs: [int.parse(userId)]);
     return true;
   }
 
@@ -523,14 +522,15 @@ class DatabaseService {
     return rows.isNotEmpty;
   }
 
-  Future<int> insertStudent(Student student) async {
+  Future<String> insertStudent(Student student) async {
     final db = await database;
-    return db.insert(kStudentsTable, student.toMap());
+    final id = await db.insert(kStudentsTable, student.toMap());
+    return id.toString();
   }
 
-  Future<int> updateStudent(Student student) async {
+  Future<void> updateStudent(Student student) async {
     final db = await database;
-    return db.update(
+    await db.update(
       kStudentsTable,
       student.toMap(),
       where: 'id = ?',
@@ -538,10 +538,10 @@ class DatabaseService {
     );
   }
 
-  Future<int> deleteStudent(int id) async {
+  Future<void> deleteStudent(String id) async {
     final db = await database;
     // Attendance rows cascade-delete via FK.
-    return db.delete(kStudentsTable, where: 'id = ?', whereArgs: [id]);
+    await db.delete(kStudentsTable, where: 'id = ?', whereArgs: [int.parse(id)]);
   }
 
   Future<int> countStudents() async {
@@ -561,12 +561,12 @@ class DatabaseService {
   /// single [eventId]. DISTINCT matters for Time In/Out events where one
   /// student produces several records per day. Scoping to the active event
   /// is what makes "Present Today" agree with the event being scanned for.
-  Future<int> countAttendanceOn(String date, {int? eventId}) async {
+  Future<int> countAttendanceOn(String date, {String? eventId}) async {
     final db = await database;
     final result = await db.rawQuery(
       'SELECT COUNT(DISTINCT student_id) AS c FROM $kAttendanceTable '
       'WHERE date = ?${eventId == null ? '' : ' AND event_id = ?'}',
-      [date, ?eventId],
+      [date, if (eventId != null) int.parse(eventId)],
     );
     return Sqflite.firstIntValue(result) ?? 0;
   }
@@ -594,18 +594,19 @@ class DatabaseService {
   }
 
   /// Creates an event, optionally activating it right away.
-  Future<int> insertEvent(
+  Future<String> insertEvent(
     String name, {
     bool setActive = false,
     String flowType = EventFlowType.oneTime,
   }) async {
     final db = await database;
-    return _insertEvent(
+    final id = await _insertEvent(
       db,
       name: name,
       isActive: setActive,
       flowType: flowType,
     );
+    return id.toString();
   }
 
   /// Updates an event's name / flow type.
@@ -623,26 +624,26 @@ class DatabaseService {
   }
 
   /// Makes [id] the active event (all others become inactive).
-  Future<void> setActiveEvent(int id) async {
+  Future<void> setActiveEvent(String id) async {
     final db = await database;
-    await _setActive(db, id);
+    await _setActive(db, int.parse(id));
   }
 
   /// Deletes a non-active event. Its attendance rows are kept but lose the
   /// event tag (FK ON DELETE SET NULL). Returns false if the event is
   /// currently active, so the active event can never be removed.
-  Future<bool> deleteEvent(int id) async {
+  Future<bool> deleteEvent(String id) async {
     final db = await database;
     final rows = await db.query(
       kEventsTable,
       columns: ['is_active'],
       where: 'id = ?',
-      whereArgs: [id],
+      whereArgs: [int.parse(id)],
       limit: 1,
     );
     if (rows.isEmpty) return false;
     if ((rows.first['is_active'] as int?) == 1) return false;
-    await db.delete(kEventsTable, where: 'id = ?', whereArgs: [id]);
+    await db.delete(kEventsTable, where: 'id = ?', whereArgs: [int.parse(id)]);
     return true;
   }
 
@@ -671,7 +672,7 @@ class DatabaseService {
   /// number of *distinct students* per course (drill-down: event → course →
   /// students). DISTINCT keeps Time In/Out events from counting the same
   /// student four times.
-  Future<Map<String, int>> courseCountsForEvent(int eventId) async {
+  Future<Map<String, int>> courseCountsForEvent(String eventId) async {
     final db = await database;
     final rows = await db.rawQuery('''
       SELECT s.course, COUNT(DISTINCT a.student_id) AS c
@@ -680,14 +681,14 @@ class DatabaseService {
       WHERE a.event_id = ?
       GROUP BY s.course
       ORDER BY c DESC, s.course ASC
-    ''', [eventId]);
+    ''', [int.parse(eventId)]);
     return {
       for (final r in rows) r['course'] as String: (r['c'] as num).toInt(),
     };
   }
 
   /// Distinct-student attendance count per event, keyed by event id.
-  Future<Map<int, int>> attendanceCountByEvent() async {
+  Future<Map<String, int>> attendanceCountByEvent() async {
     final db = await database;
     final rows = await db.rawQuery(
       'SELECT event_id, COUNT(DISTINCT student_id) AS c '
@@ -696,7 +697,7 @@ class DatabaseService {
     );
     return {
       for (final r in rows)
-        if (r['event_id'] is int) r['event_id'] as int: (r['c'] as num).toInt(),
+        if (r['event_id'] is int) r['event_id'].toString(): (r['c'] as num).toInt(),
     };
   }
 
@@ -751,14 +752,15 @@ class DatabaseService {
     return rows.isNotEmpty;
   }
 
-  Future<int> insertCourse(Course course) async {
+  Future<String> insertCourse(Course course) async {
     final db = await database;
-    return db.insert('courses', course.toMap());
+    final id = await db.insert('courses', course.toMap());
+    return id.toString();
   }
 
-  Future<int> updateCourse(Course course) async {
+  Future<void> updateCourse(Course course) async {
     final db = await database;
-    return db.update(
+    await db.update(
       'courses',
       course.toMap(),
       where: 'id = ?',
@@ -766,12 +768,12 @@ class DatabaseService {
     );
   }
 
-  Future<int> deleteCourse(int id) async {
+  Future<void> deleteCourse(String id) async {
     final db = await database;
-    return db.delete(
+    await db.delete(
       'courses',
       where: 'id = ?',
-      whereArgs: [id],
+      whereArgs: [int.parse(id)],
     );
   }
 
@@ -781,22 +783,23 @@ class DatabaseService {
   Future<Attendance?> findAttendance(
     String studentId,
     String date,
-    int eventId,
+    String eventId,
     String checkType,
   ) async {
     final db = await database;
     final rows = await db.query(
       kAttendanceTable,
       where: 'student_id = ? AND date = ? AND event_id = ? AND check_type = ?',
-      whereArgs: [studentId, date, eventId, checkType],
+      whereArgs: [studentId, date, int.parse(eventId), checkType],
       limit: 1,
     );
     return rows.isEmpty ? null : Attendance.fromMap(rows.first);
   }
 
-  Future<int> insertAttendance(Attendance attendance) async {
+  Future<String> insertAttendance(Attendance attendance) async {
     final db = await database;
-    return db.insert(kAttendanceTable, attendance.toMap());
+    final id = await db.insert(kAttendanceTable, attendance.toMap());
+    return id.toString();
   }
 
   /// Recent attendance joined with student + event names, newest first.
@@ -826,7 +829,7 @@ class DatabaseService {
     String? course,
     String? yearLevel,
     String? status,
-    int? eventId,
+    String? eventId,
   }) async {
     final db = await database;
     final where = <String>[];
@@ -857,7 +860,7 @@ class DatabaseService {
     }
     if (eventId != null) {
       where.add('a.event_id = ?');
-      args.add(eventId);
+      args.add(int.parse(eventId));
     }
 
     final sql = '''
@@ -898,5 +901,106 @@ class DatabaseService {
       ORDER BY a.date DESC, a.time DESC
     ''', [studentId]);
     return rows.map(Attendance.fromMap).toList();
+  }
+
+  /// Seeds demo data on first launch so the app is usable immediately.
+  @override
+  Future<void> seedDemoData() async {
+    final db = await database;
+    final existing = await db.query(kUsersTable, limit: 1);
+    if (existing.isNotEmpty) return;
+
+    final adminHash = hashPassword(DemoCredentials.adminPassword, salt: null);
+    await db.insert(kUsersTable, {
+      'username': DemoCredentials.adminUsername,
+      'password_hash': adminHash['hash'],
+      'salt': adminHash['salt'],
+      'role': 'admin',
+      'created_at': DateTime.now().toIso8601String(),
+    });
+
+    for (final courseName in kCourses) {
+      try {
+        await db.insert('courses', {
+          'course_name': courseName,
+          'created_at': DateTime.now().toIso8601String(),
+        });
+      } catch (_) {}
+    }
+
+    final demoStudents = [
+      ('2026-0001', 'Dela Cruz', 'Juan', kCourses[0], kYearLevels[1]),
+      ('2026-0002', 'Santos', 'Maria', kCourses[1], kYearLevels[0]),
+      ('2026-0003', 'Reyes', 'Jose', kCourses[0], kYearLevels[2]),
+      ('2026-0004', 'Garcia', 'Ana', kCourses[2], kYearLevels[1]),
+      ('2026-0005', 'Mendoza', 'Carlos', kCourses[1], kYearLevels[3]),
+    ];
+
+    final now = DateTime.now();
+    for (final s in demoStudents) {
+      final creds = hashPassword(DemoCredentials.studentPassword, salt: null);
+      await db.insert(kStudentsTable, {
+        'student_id': s.$1,
+        'last_name': s.$2,
+        'first_name': s.$3,
+        'course': s.$4,
+        'year_level': s.$5,
+        'password_hash': creds['hash'],
+        'salt': creds['salt'],
+        'created_at': now.toIso8601String(),
+      });
+    }
+
+    final defaultEventId = await _insertEvent(db, name: defaultEventName, isActive: true);
+
+    const history = {
+      0: {1: true, 2: true, 4: true},
+      1: {1: true, 2: true, 3: true, 4: true},
+      2: {1: true, 2: true, 3: true, 5: true},
+      3: {2: true, 3: true, 4: true, 5: true},
+    };
+
+    history.forEach((offset, present) {
+      final day = DateTime(now.year, now.month, now.day).subtract(Duration(days: offset));
+      final recordTime = DateTime(day.year, day.month, day.day, 8, 5 + offset);
+      for (final studentIdx in present.keys) {
+        final studentId = '2026-000$studentIdx';
+        db.insert(kAttendanceTable, {
+          'student_id': studentId,
+          'date': Formatters.dbDate(day),
+          'time': '${recordTime.hour.toString().padLeft(2, '0')}:${recordTime.minute.toString().padLeft(2, '0')}',
+          'status': AttendanceStatus.present,
+          'check_type': CheckType.present,
+          'event_id': defaultEventId,
+          'created_at': day.toIso8601String(),
+        });
+      }
+    });
+
+    final intramsId = await _insertEvent(db, name: 'Intrams', isActive: false, flowType: EventFlowType.timeInOut);
+    const intramsStudents = ['2026-0002', '2026-0004'];
+    const intramsCheckTimes = {
+      CheckType.amIn: 8,
+      CheckType.amOut: 12,
+      CheckType.pmIn: 13,
+      CheckType.pmOut: 17,
+    };
+    for (final offset in [0, 1]) {
+      final day = DateTime(now.year, now.month, now.day).subtract(Duration(days: offset));
+      for (var i = 0; i < intramsStudents.length; i++) {
+        final studentId = intramsStudents[i];
+        intramsCheckTimes.forEach((checkType, hour) {
+          db.insert(kAttendanceTable, {
+            'student_id': studentId,
+            'date': Formatters.dbDate(day),
+            'time': '${hour.toString().padLeft(2, '0')}:${(i * 5).toString().padLeft(2, '0')}',
+            'status': AttendanceStatus.present,
+            'check_type': checkType,
+            'event_id': intramsId,
+            'created_at': day.toIso8601String(),
+          });
+        });
+      }
+    }
   }
 }

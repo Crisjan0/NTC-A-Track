@@ -10,7 +10,7 @@ import '../utils/constants.dart';
 ///  - [EventFlowType.timeInOut]: AM + PM sessions, each with a Time In and
 ///    a Time Out scan
 class AttendanceEvent {
-  final int? id;
+  final String? id;
   final String name;
   final bool isActive;
   final String flowType;
@@ -28,9 +28,9 @@ class AttendanceEvent {
   bool get usesTimeInOut => flowType == EventFlowType.timeInOut;
 
   factory AttendanceEvent.fromMap(Map<String, dynamic> map) => AttendanceEvent(
-        id: map['id'] as int?,
+        id: map['id'] as String?,
         name: map['name'] as String,
-        isActive: (map['is_active'] as int?) == 1,
+        isActive: map['is_active'] as bool? ?? false,
         flowType: map['flow_type'] as String? ?? EventFlowType.oneTime,
         createdAt: DateTime.parse(map['created_at'] as String),
       );
@@ -38,7 +38,7 @@ class AttendanceEvent {
   Map<String, dynamic> toMap() => {
         if (id != null) 'id': id,
         'name': name,
-        'is_active': isActive ? 1 : 0,
+        'is_active': isActive,
         'flow_type': flowType,
         'created_at': createdAt.toIso8601String(),
       };

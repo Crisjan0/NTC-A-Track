@@ -3,7 +3,8 @@ import '../models/event_model.dart';
 import '../models/student_model.dart';
 import '../utils/constants.dart';
 import '../utils/formatters.dart';
-import 'database_service.dart';
+import 'database_service_factory.dart';
+import 'database_service_interface.dart';
 
 /// Outcome of attempting to record attendance from a QR scan.
 enum AttendanceResultType { success, alreadyRecorded, studentNotFound }
@@ -80,7 +81,7 @@ class AttendanceService {
 
   static final AttendanceService instance = AttendanceService._();
 
-  final DatabaseService _db = DatabaseService.instance;
+  final DatabaseServiceInterface _db = DatabaseServiceFactory.instance;
 
   /// Core scan flow: resolve student, check today's record for the active
   /// event + check type, insert if new.
@@ -147,14 +148,14 @@ class AttendanceService {
 
   Future<List<AttendanceEvent>> allEvents() => _db.getAllEvents();
 
-  Future<Map<int, int>> attendanceCountByEvent() =>
+  Future<Map<String, int>> attendanceCountByEvent() =>
       _db.attendanceCountByEvent();
 
   /// Distinct courses that have attendance records for [eventId], with counts.
-  Future<Map<String, int>> courseCountsForEvent(int eventId) =>
+  Future<Map<String, int>> courseCountsForEvent(String eventId) =>
       _db.courseCountsForEvent(eventId);
 
-  Future<int> createEvent(
+  Future<String> createEvent(
     String name, {
     bool setActive = false,
     String flowType = EventFlowType.oneTime,
@@ -163,16 +164,16 @@ class AttendanceService {
 
   Future<void> updateEvent(AttendanceEvent event) => _db.updateEvent(event);
 
-  Future<void> setActiveEvent(int id) => _db.setActiveEvent(id);
+  Future<void> setActiveEvent(String id) => _db.setActiveEvent(id);
 
   /// False if the event is currently active (which can never be deleted).
-  Future<bool> deleteEvent(int id) => _db.deleteEvent(id);
+  Future<bool> deleteEvent(String id) => _db.deleteEvent(id);
 
   Future<DashboardStats> dashboardStats() async {
     final totalStudents = await _db.countStudents();
     final event = await _db.ensureActiveEvent();
     final today = Formatters.dbDate(DateTime.now());
-    final presentToday = await _db.countAttendanceOn(today, eventId: event.id);
+    final presentToday = await _db.countAttendanceOn(today, eventId: event.id!);
     return DashboardStats(
       totalStudents: totalStudents,
       presentToday: presentToday,
@@ -191,7 +192,7 @@ class AttendanceService {
     String? course,
     String? yearLevel,
     String? status,
-    int? eventId,
+    String? eventId,
   }) =>
       _db.queryAttendance(
         search: search,
@@ -242,7 +243,7 @@ class AttendanceService {
     final events = await _db.getAllEvents();
     final byId = {for (final e in events) if (e.id != null) e.id!: e};
 
-    final counts = <int, int>{};
+    final counts = <String, int>{};
     final seenDays = <String>{};
     for (final r in records) {
       final id = r.eventId;

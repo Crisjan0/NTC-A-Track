@@ -35,7 +35,7 @@ class _EventAttendanceBrowseScreenState
 
   // null = still loading that level.
   List<AttendanceEvent>? _events;
-  Map<int, int>? _countsByEvent;
+  Map<String, int>? _countsByEvent;
   AttendanceEvent? _event;
   Map<String, int>? _courseCounts;
   String? _course;

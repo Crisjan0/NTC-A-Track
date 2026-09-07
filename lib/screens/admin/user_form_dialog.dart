@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../models/user_model.dart';
-import '../../services/database_service.dart';
+import '../../services/database_service_factory.dart';
+import '../../services/database_service_interface.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/constants.dart';
 
@@ -49,8 +50,10 @@ class _UserFormDialogState extends State<UserFormDialog> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final db = DatabaseServiceFactory.instance;
+
     if (_isEditing) {
-      await DatabaseService.instance.updateUser(
+      await db.updateUser(
         widget.user!,
         newUsername: _usernameController.text.trim(),
       );
@@ -69,15 +72,16 @@ class _UserFormDialogState extends State<UserFormDialog> {
       return;
     } else {
       password = _passwordController.text.trim();
-    }    final creds = DatabaseService.hashPassword(password);
-    final db = await DatabaseService.instance.database;
-    await db.insert(DatabaseService.kUsersTable, {
-      'username': _usernameController.text.trim(),
-      'password_hash': creds['hash'],
-      'salt': creds['salt'],
-      'role': 'admin',
-      'created_at': DateTime.now().toIso8601String(),
-    });
+    }
+    final creds = DatabaseServiceInterface.hashPassword(password);
+    final newUser = User(
+      username: _usernameController.text.trim(),
+      passwordHash: creds['hash']!,
+      salt: creds['salt']!,
+      role: 'admin',
+      createdAt: DateTime.now(),
+    );
+    await db.insertUser(newUser);
 
     if (!mounted) return;
     Navigator.of(context).pop(true);

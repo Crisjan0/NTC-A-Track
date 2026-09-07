@@ -1,6 +1,7 @@
 import '../models/student_model.dart';
 import '../utils/constants.dart';
-import 'database_service.dart';
+import 'database_service_factory.dart';
+import 'database_service_interface.dart';
 
 /// One parsed student row from an import file (no password — imported
 /// students always get [kDefaultStudentPassword]).
@@ -44,7 +45,7 @@ class StudentService {
 
   static final StudentService instance = StudentService._();
 
-  final DatabaseService _db = DatabaseService.instance;
+  final DatabaseServiceInterface _db = DatabaseServiceFactory.instance;
 
   Future<List<Student>> getAllStudents() => _db.getAllStudents();
 
@@ -65,7 +66,7 @@ class StudentService {
       throw StudentException('Student ID "$cleanedId" is already in use.');
     }
 
-    final creds = DatabaseService.hashPassword(password);
+    final creds = DatabaseServiceInterface.hashPassword(password);
     await _db.insertStudent(Student(
       studentId: cleanedId,
       lastName: lastName.trim(),
@@ -109,7 +110,7 @@ class StudentService {
         continue;
       }
 
-      final creds = DatabaseService.hashPassword(kDefaultStudentPassword);
+      final creds = DatabaseServiceInterface.hashPassword(kDefaultStudentPassword);
       await _db.insertStudent(Student(
         studentId: id,
         lastName: row.lastName.trim(),
@@ -150,7 +151,7 @@ class StudentService {
   }) async {
     var updated = student;
     if (newPassword != null && newPassword.isNotEmpty) {
-      final creds = DatabaseService.hashPassword(newPassword);
+      final creds = DatabaseServiceInterface.hashPassword(newPassword);
       updated = Student(
         id: student.id,
         studentId: student.studentId,

@@ -1,6 +1,7 @@
 import '../models/student_model.dart';
 import '../models/user_model.dart';
-import 'database_service.dart';
+import 'database_service_factory.dart';
+import 'database_service_interface.dart';
 import 'login_rate_limiter.dart';
 import 'session_service.dart';
 
@@ -14,7 +15,7 @@ class AuthService {
 
   static final AuthService instance = AuthService._();
 
-  final DatabaseService _db = DatabaseService.instance;
+  final DatabaseServiceInterface _db = DatabaseServiceFactory.instance;
   final SessionService _sessions = SessionService.instance;
 
   /// Returns the created session, or throws [AuthException] / [RateLimitException]
@@ -27,7 +28,7 @@ class AuthService {
     if (user == null) {
       throw const AuthException('Account not found. Please check your username.');
     }
-    if (!DatabaseService.verifyPassword(password, user.salt, user.passwordHash)) {
+    if (!DatabaseServiceInterface.verifyPassword(password, user.salt, user.passwordHash)) {
       await _recordFailureOrThrow(identifier);
       throw const AuthException('Incorrect password. Please try again.');
     }
@@ -47,7 +48,7 @@ class AuthService {
     if (student == null) {
       throw const AuthException('Student not found. Please check your Student ID.');
     }
-    if (!DatabaseService.verifyPassword(
+    if (!DatabaseServiceInterface.verifyPassword(
         password, student.salt, student.passwordHash)) {
       await _recordFailureOrThrow(identifier);
       throw const AuthException('Incorrect password. Please try again.');
@@ -74,7 +75,7 @@ class AuthService {
     // Try as admin first (username).
     final user = await _db.getUserByUsername(cleaned);
     if (user != null) {
-      if (DatabaseService.verifyPassword(
+      if (DatabaseServiceInterface.verifyPassword(
           password, user.salt, user.passwordHash)) {
         await LoginRateLimiter.instance.clear(cleaned);
         final session = Session(role: 'admin', username: user.username);
@@ -88,7 +89,7 @@ class AuthService {
     // Try as student (Student ID).
     final student = await _db.getStudentById(cleaned);
     if (student != null) {
-      if (DatabaseService.verifyPassword(
+      if (DatabaseServiceInterface.verifyPassword(
           password, student.salt, student.passwordHash)) {
         await LoginRateLimiter.instance.clear(cleaned);
         final session = Session(

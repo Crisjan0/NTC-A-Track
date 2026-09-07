@@ -31,7 +31,7 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
   Student? _student;
 
   /// null = showing all records; otherwise the selected event id.
-  int? _selectedEventId;
+  String? _selectedEventId;
 
   @override
   void initState() {
@@ -154,8 +154,8 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
 /// count badge. Tapping a chip filters the history to that event.
 class _EventsChips extends StatelessWidget {
   final List<StudentEventSummary> events;
-  final int? selectedEventId;
-  final ValueChanged<int> onSelect;
+  final String? selectedEventId;
+  final ValueChanged<String> onSelect;
 
   const _EventsChips({
     required this.events,

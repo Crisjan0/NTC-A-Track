@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 
 import '../config/supabase_config.dart';
+import 'database_service_interface.dart';
 import '../models/attendance_model.dart';
 import '../models/event_model.dart';
 import '../models/student_model.dart';
@@ -19,7 +20,7 @@ import '../utils/password_hash.dart';
 ///    active at a time and QR scans are recorded to it
 ///  - attendance: one record per student per day per event (UNIQUE
 ///    constraint prevents duplicate attendance at the database level)
-class SupabaseDatabaseService {
+class SupabaseDatabaseService implements DatabaseServiceInterface {
   SupabaseDatabaseService._();
 
   static final SupabaseDatabaseService instance = SupabaseDatabaseService._();
@@ -88,14 +89,14 @@ class SupabaseDatabaseService {
   /// Update an existing admin's password. Returns the new salt + hash map so
   /// callers can also update their own in-memory copy.
   Future<Map<String, String>> updateUserPassword(
-    int userId,
+    String userId,
     String plainPassword,
   ) async {
     final creds = hashPassword(plainPassword);
     await _client.from(kUsersTable).update({
       'password_hash': creds['hash'],
       'salt': creds['salt'],
-    }).eq('id', userId);
+    }).eq('id', int.parse(userId));
     return creds;
   }
 
@@ -132,15 +133,15 @@ class SupabaseDatabaseService {
 
   /// Deletes an admin account. The caller is responsible for preventing an
   /// admin from deleting their own account (caller supplies [currentUserId]).
-  Future<bool> deleteUser(int userId, {int? currentUserId}) async {
+  Future<bool> deleteUser(String userId, {String? currentUserId}) async {
     if (currentUserId == userId) return false;
     final response = await _client
         .from(kUsersTable)
         .select('id')
-        .eq('id', userId)
+        .eq('id', int.parse(userId))
         .maybeSingle();
     if (response == null) return false;
-    await _client.from(kUsersTable).delete().eq('id', userId);
+    await _client.from(kUsersTable).delete().eq('id', int.parse(userId));
     return true;
   }
 

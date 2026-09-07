@@ -1,35 +1,26 @@
-import 'database_service.dart';
 import 'database_service_interface.dart';
 import 'supabase_database_service.dart';
 
 /// Factory for creating database service instances.
-/// Set [useSupabase] to true to use Supabase (cloud), false for SQLite (local).
+/// Uses Supabase (cloud) only.
 class DatabaseServiceFactory {
-  static bool _useSupabase = true; // Change to false for local SQLite
-  
   static DatabaseServiceInterface? _instance;
+  static bool _initialized = false;
   
-  static bool get useSupabase => _useSupabase;
-  
-  static set useSupabase(bool value) {
-    _useSupabase = value;
-    _instance = null; // Reset instance when switching
-  }
-  
-static DatabaseServiceInterface get instance {
-    _instance ??= _useSupabase
-        ? SupabaseDatabaseService.instance as DatabaseServiceInterface
-        : DatabaseService.instance as DatabaseServiceInterface;
+  static DatabaseServiceInterface get instance {
+    _instance ??= SupabaseDatabaseService.instance as DatabaseServiceInterface;
     return _instance!;
   }
   
   static Future<void> initialize() async {
-    if (_useSupabase) {
-      await SupabaseDatabaseService.initialize();
-    }
+    if (_initialized) return;
+    
+    await SupabaseDatabaseService.initialize();
+    _initialized = true;
   }
   
   static void reset() {
     _instance = null;
+    _initialized = false;
   }
 }

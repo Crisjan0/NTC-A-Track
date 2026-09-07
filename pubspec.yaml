@@ -41,7 +41,7 @@ dependencies:
   shared_preferences: ^2.5.5
   crypto: ^3.0.7
   intl: ^0.20.3
-  google_fonts: ^6.2.1
+  google_fonts: ^8.2.1
   file_picker: ^12.2.0
   csv: ^8.0.0
 

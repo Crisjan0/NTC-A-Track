@@ -848,7 +848,7 @@ class _StudentSummary extends StatelessWidget {
           _SummaryRow(label: 'Student ID', value: student.studentId),
           _SummaryRow(label: 'Name', value: student.fullName),
           _SummaryRow(label: 'Course', value: student.course),
-          _SummaryRow(label: 'Year Level', value: student.yearLevel),
+          _SummaryRow(label: 'Year Level', value: student.displayYearLevel),
           if (event != null && event.isNotEmpty)
             _SummaryRow(label: 'Event', value: event),
           if (record != null) ...[

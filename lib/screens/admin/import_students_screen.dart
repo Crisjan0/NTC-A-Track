@@ -7,6 +7,7 @@ import '../../services/student_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/constants.dart';
 import '../../utils/student_csv.dart';
+import '../../utils/year_level.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/glass_panel.dart';
 import '../../widgets/glass_scaffold.dart';
@@ -116,12 +117,16 @@ class _ImportStudentsScreenState extends State<ImportStudentsScreen> {
     final seen = <String>{};
     for (final row in rows) {
       final id = row.studentId.trim();
+      // Year Level auto-derives from the ID — only flag missing when both
+      // the CSV cell is empty AND the ID has no YYYY- prefix.
+      final hasYear = row.yearLevel.trim().isNotEmpty ||
+          YearLevelAuto.derive(id) != null;
       String? reason;
       if (id.isEmpty ||
           row.firstName.trim().isEmpty ||
           row.lastName.trim().isEmpty ||
           row.course.trim().isEmpty ||
-          row.yearLevel.trim().isEmpty) {
+          !hasYear) {
         reason = 'Missing required fields';
       } else if (seen.contains(id)) {
         reason = 'Duplicate Student ID in file';
@@ -286,7 +291,7 @@ class _ImportStudentsScreenState extends State<ImportStudentsScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Student ID, First Name, Last Name, Course, Year Level',
+                  'Student ID, First Name, Last Name, Course, Year Level (optional — auto from ID)',
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -487,11 +492,15 @@ class _ImportStudentsScreenState extends State<ImportStudentsScreen> {
                             ),
                           ),
                           if (row.course.isNotEmpty ||
-                              row.yearLevel.isNotEmpty)
+                              row.yearLevel.isNotEmpty ||
+                              YearLevelAuto.isAuto(row.studentId))
                             Text(
                               [
                                 if (row.course.isNotEmpty) row.course,
-                                if (row.yearLevel.isNotEmpty) row.yearLevel,
+                                if (row.yearLevel.isNotEmpty)
+                                  row.yearLevel
+                                else if (YearLevelAuto.isAuto(row.studentId))
+                                  '${YearLevelAuto.derive(row.studentId)} (auto)',
                               ].join(' · '),
                               style: TextStyle(
                                 fontSize: 12,

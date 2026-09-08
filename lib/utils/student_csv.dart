@@ -28,8 +28,10 @@ String buildStudentCsvTemplate() {
 /// When no header is found, the fixed column order is used:
 /// student ID, first name, last name, course, year level.
 ///
-/// Cells that don't exist are returned as empty strings — rows with missing
-/// required fields are skipped later by [StudentService.importStudents].
+/// Year Level may be left blank — it auto-derives from the Student ID
+/// (`YYYY-XXXX`). Cells that don't exist are returned as empty strings —
+/// rows with missing required fields are skipped later by
+/// [StudentService.importStudents].
 List<StudentImportRow> parseStudentCsv(String content) {
   final rows = csv.decode(content);
   if (rows.isEmpty) return const [];

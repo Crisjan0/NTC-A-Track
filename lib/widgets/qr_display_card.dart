@@ -121,7 +121,7 @@ class QrDisplayCard extends StatelessWidget {
                   _DetailRow(
                     icon: Icons.grade_rounded,
                     label: 'Year Level',
-                    value: student.yearLevel,
+                    value: student.displayYearLevel,
                   ),
                 ],
               ),

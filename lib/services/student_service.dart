@@ -1,5 +1,6 @@
 import '../models/student_model.dart';
 import '../utils/constants.dart';
+import '../utils/year_level.dart';
 import 'auth_link.dart';
 import 'database_service_factory.dart';
 import 'database_service_interface.dart';
@@ -104,17 +105,23 @@ class StudentService {
     final seen = <String>{}; // IDs already added earlier in this batch.
 
     for (final row in rows) {
-      if (row.studentId.trim().isEmpty ||
+      final id = row.studentId.trim();
+      // Year Level is AUTO from the ID — empty CSV cell is fine when the
+      // ID has a YYYY- prefix. Only non-standard IDs need a manual value.
+      final autoYear = YearLevelAuto.derive(id);
+      final resolvedYear = row.yearLevel.trim().isNotEmpty
+          ? row.yearLevel.trim()
+          : (autoYear ?? '');
+      if (id.isEmpty ||
           row.firstName.trim().isEmpty ||
           row.lastName.trim().isEmpty ||
           row.course.trim().isEmpty ||
-          row.yearLevel.trim().isEmpty) {
+          resolvedYear.isEmpty) {
         skipped.add(row);
         skippedReasons.add('Missing required fields');
         continue;
       }
 
-      final id = row.studentId.trim();
       final reason = await _importConflict(id, seen);
       if (reason != null) {
         skipped.add(row);
@@ -128,7 +135,7 @@ class StudentService {
           lastName: row.lastName.trim(),
           firstName: row.firstName.trim(),
           course: row.course.trim(),
-          yearLevel: row.yearLevel.trim(),
+          yearLevel: resolvedYear,
           passwordHash: kManagedByFirebaseAuth,
           salt: kManagedByFirebaseAuth,
           createdAt: DateTime.now(),
@@ -226,8 +233,10 @@ class StudentService {
           s.studentId.toLowerCase().contains(query) ||
           s.fullName.toLowerCase().contains(query);
       final matchesCourse = course == null || course.isEmpty || s.course == course;
-      final matchesYear =
-          yearLevel == null || yearLevel.isEmpty || s.yearLevel == yearLevel;
+      // Filter against the AUTO year level, not the stored fallback.
+      final matchesYear = yearLevel == null ||
+          yearLevel.isEmpty ||
+          s.displayYearLevel == yearLevel;
       return matchesSearch && matchesCourse && matchesYear;
     }).toList();
   }

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../utils/constants.dart';
 import '../utils/formatters.dart';
+import '../utils/year_level.dart';
 import 'auth_link.dart';
 import 'database_service_interface.dart';
 import '../models/attendance_model.dart';
@@ -480,12 +481,19 @@ class FirebaseDatabaseService implements DatabaseServiceInterface {
     final studentNo = raw['student_id']?.toString() ?? '';
     final student = joins.students[studentNo];
     final eventId = raw['event_id']?.toString();
+    final storedYear = student?['year_level'] as String?;
     return attendance.copyWith(
       studentName: student == null
           ? null
           : '${student['first_name']} ${student['last_name']}',
       course: student?['course'] as String?,
-      yearLevel: student?['year_level'] as String?,
+      // Auto year level from ID, fallback to stored value. No DB change.
+      yearLevel: storedYear == null
+          ? null
+          : YearLevelAuto.effective(
+              studentId: studentNo,
+              storedYearLevel: storedYear,
+            ),
       eventName:
           eventId == null ? null : joins.eventNames[eventId],
     );

@@ -94,7 +94,7 @@ class StudentProfileScreen extends StatelessWidget {
                                   _ProfileRow(
                                     icon: Icons.grade_rounded,
                                     label: 'Year Level',
-                                    value: student.yearLevel,
+                                    value: student.displayYearLevel,
                                   ),
                                   _ProfileRow(
                                     icon: Icons.person_outline_rounded,

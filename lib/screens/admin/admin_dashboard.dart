@@ -110,63 +110,50 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       child: Center(child: CircularProgressIndicator()),
                     )
                   else ...[
-                    // Summary cards.
-                    Row(
+                    // Summary cards: uniform 2x2 grid so all four cards
+                    // share exactly the same size.
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 0.95,
                       children: [
-                        Expanded(
-                          child: DashboardCard(
-                            label: 'Total Students',
-                            value: '$_totalStudents',
-                            icon: Icons.group_rounded,
-                            gradient: AppGradients.primary,
-                          ),
+                        DashboardCard(
+                          label: 'Total Students',
+                          value: '$_totalStudents',
+                          icon: Icons.group_rounded,
+                          gradient: AppGradients.primary,
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: DashboardCard(
-                            label: 'Present Today',
-                            value: '$_presentToday',
-                            icon: Icons.check_circle_rounded,
-                            gradient: AppGradients.success,
-                          ),
+                        DashboardCard(
+                          label: 'Present Today',
+                          value: '$_presentToday',
+                          icon: Icons.check_circle_rounded,
+                          gradient: AppGradients.success,
+                        ),
+                        DashboardCard(
+                          label: 'Absent Today',
+                          value: '$_absentToday',
+                          icon: Icons.cancel_rounded,
+                          gradient: AppGradients.danger,
+                        ),
+                        DashboardCard(
+                          label: 'Incomplete Today',
+                          value: '$_incompleteToday',
+                          hint: 'Missing AM/PM scans',
+                          icon: Icons.hourglass_bottom_rounded,
+                          gradient: AppGradients.warning,
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: DashboardCard(
-                            label: 'Absent Today',
-                            value: '$_absentToday',
-                            icon: Icons.cancel_rounded,
-                            gradient: AppGradients.danger,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: DashboardCard(
-                            label: 'Incomplete Today',
-                            value: '$_incompleteToday',
-                            hint: 'Missing AM/PM scans',
-                            icon: Icons.hourglass_bottom_rounded,
-                            gradient: AppGradients.warning,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: DashboardCard(
-                            label: 'Total Attendance',
-                            value: '$_totalAttendance',
-                            icon: Icons.event_available_rounded,
-                            gradient: AppGradients.orange,
-                          ),
-                        ),
-                      ],
+                    // Full-width total card.
+                    DashboardCard(
+                      label: 'Total Attendance',
+                      value: '$_totalAttendance',
+                      icon: Icons.event_available_rounded,
+                      gradient: AppGradients.orange,
                     ),
                     const SizedBox(height: 24),
                     const SectionTitle(title: 'Active Event'),

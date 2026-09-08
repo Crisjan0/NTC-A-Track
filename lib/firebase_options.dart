@@ -30,10 +30,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for ios - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return ios;
       case TargetPlatform.macOS:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for macos - '
@@ -62,5 +59,14 @@ class DefaultFirebaseOptions {
     messagingSenderId: '678415717573',
     projectId: 'qr-attendance-system-2c15d',
     storageBucket: 'qr-attendance-system-2c15d.firebasestorage.app',
+  );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyB33kwjwm01iecJPlzT8VsMNOyhc1wKuCw',
+    appId: '1:678415717573:ios:b72187824a405e3ce2ccac',
+    messagingSenderId: '678415717573',
+    projectId: 'qr-attendance-system-2c15d',
+    storageBucket: 'qr-attendance-system-2c15d.firebasestorage.app',
+    iosBundleId: 'com.tisting.ntcatrack',
   );
 }

@@ -8,7 +8,10 @@ on:
 
 jobs:
   build-ios:
-    runs-on: macos-14
+    # macos-15 ships Xcode 16+ (Swift 6), required by the current
+    # firebase-ios-sdk. macos-14 defaults to an older Xcode whose Swift
+    # compiler cannot parse it ("Cannot find type 'sending'").
+    runs-on: macos-15
 
     steps:
       - name: Checkout

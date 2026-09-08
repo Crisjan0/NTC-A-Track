@@ -6,6 +6,7 @@ import '../../services/session_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/constants.dart';
 import '../../widgets/avatar.dart';
+import '../../widgets/check_update_card.dart';
 import '../../widgets/glass_panel.dart';
 import '../../widgets/gradient_header.dart';
 import '../auth/login_screen.dart';
@@ -105,6 +106,8 @@ class StudentProfileScreen extends StatelessWidget {
                                 ],
                               ),
                             ),
+                            const SizedBox(height: 20),
+                            const CheckUpdateCard(),
                             const SizedBox(height: 20),
                             SizedBox(
                               width: double.infinity,

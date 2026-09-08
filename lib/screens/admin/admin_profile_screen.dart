@@ -95,21 +95,6 @@ class AdminProfileScreen extends StatelessWidget {
                           label: 'Username',
                           value: username,
                         ),
-                        _ProfileRow(
-                          icon: Icons.admin_panel_settings_rounded,
-                          label: 'Role',
-                          value: 'Admin',
-                        ),
-                        _ProfileRow(
-                          icon: Icons.storage_rounded,
-                          label: 'Database',
-                          value: 'Local SQLite (demo)',
-                        ),
-                        _ProfileRow(
-                          icon: Icons.lock_outline_rounded,
-                          label: 'Security',
-                          value: 'Hashed passwords',
-                        ),
                       ],
                     ),
                   ),

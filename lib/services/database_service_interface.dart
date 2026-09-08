@@ -45,6 +45,13 @@ abstract class DatabaseServiceInterface {
 
   // Attendance
   Future<Attendance?> findAttendance(String studentId, String date, String eventId, String checkType);
+  /// All records for one student on one day for one event (used for
+  /// Time In/Out completeness checks and detail views).
+  Future<List<Attendance>> findDayAttendance(String studentId, String date, String eventId);
+  /// Recomputes a Time In/Out day's status: PRESENT when all four AM/PM
+  /// checks exist, INCOMPLETE otherwise. Updates every row of the day and
+  /// returns true when the day is complete.
+  Future<bool> syncTimeInOutDayStatus(String studentId, String date, String eventId);
   Future<String> insertAttendance(Attendance attendance);
   Future<List<Attendance>> recentAttendance({int limit = 8});
   Future<List<Attendance>> queryAttendance({
@@ -58,7 +65,10 @@ abstract class DatabaseServiceInterface {
   Future<List<String>> distinctAttendanceDates();
   Future<List<Attendance>> attendanceForStudent(String studentId);
   Future<int> countAttendance();
-  Future<int> countAttendanceOn(String date, {String? eventId});
+  /// Distinct students with records on [date] (optionally for one event
+  /// and/or one status). One student counts once even with several
+  /// Time In/Out checks.
+  Future<int> countAttendanceOn(String date, {String? eventId, String? status});
 
   // Seed data
   Future<void> seedDemoData();

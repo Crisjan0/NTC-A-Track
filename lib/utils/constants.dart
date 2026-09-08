@@ -241,6 +241,11 @@ class AttendanceStatus {
 
   static const String present = 'PRESENT';
   static const String absent = 'ABSENT';
+
+  /// Partial Time In/Out day: at least one AM/PM check is still missing.
+  /// Only used by [EventFlowType.timeInOut] events; one-time events are
+  /// always PRESENT once scanned.
+  static const String incomplete = 'INCOMPLETE';
 }
 
 /// Attendance flow options for an event.

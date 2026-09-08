@@ -11,6 +11,7 @@ import '../../utils/app_theme.dart';
 import '../../utils/constants.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/attendance_card.dart';
+import '../../widgets/attendance_detail_sheet.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/glass_panel.dart';
 import '../../widgets/glass_scaffold.dart';
@@ -84,15 +85,24 @@ class _EventAttendanceBrowseScreenState
     setState(() => _records = records);
   }
 
-  Future<void> _downloadEventAttendance() async {
+  Future<void> _downloadEventAttendance({String? yearLevel}) async {
     final event = _event;
     if (event?.id == null || _exporting) return;
 
     setState(() => _exporting = true);
     try {
-      final records = await _service.queryAttendance(eventId: event!.id);
+      final records = await _service.queryAttendance(
+        eventId: event!.id,
+        // When launched from the course records level, keep that filter.
+        course: _course,
+        yearLevel: yearLevel,
+      );
       if (records.isEmpty) {
-        if (mounted) _showMessage('No attendance records to download yet.');
+        if (mounted) {
+          _showMessage(yearLevel == null
+              ? 'No attendance records to download yet.'
+              : 'No attendance records for $yearLevel yet.');
+        }
         return;
       }
 
@@ -122,7 +132,13 @@ class _EventAttendanceBrowseScreenState
           ],
       ];
 
-      final fileName = '${_safeFileName(event.name)}_attendance.csv';
+      final scope = [
+        if (_course != null) _safeFileName(_course!),
+        if (yearLevel != null) _safeFileName(yearLevel),
+      ].join('_');
+      final fileName = scope.isEmpty
+          ? '${_safeFileName(event.name)}_attendance.csv'
+          : '${_safeFileName(event.name)}_${scope}_attendance.csv';
       final path = await FilePicker.saveFile(
         dialogTitle: 'Download event attendance',
         fileName: fileName,
@@ -139,6 +155,51 @@ class _EventAttendanceBrowseScreenState
     } finally {
       if (mounted) setState(() => _exporting = false);
     }
+  }
+
+  /// Lets the admin pick a year level before downloading: whole event (or
+  /// course) or one year level only.
+  Future<void> _showDownloadSheet() async {
+    if (_event?.id == null || _exporting) return;
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+              child: Text(
+                'Download by year level',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.paletteOf(ctx).textPrimary,
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.clear_all_rounded),
+              title: Text(
+                _course == null
+                    ? 'All Year Levels (whole event)'
+                    : 'All Year Levels ($_course)',
+              ),
+              onTap: () => Navigator.of(ctx).pop(''),
+            ),
+            for (final year in kYearLevels)
+              ListTile(
+                leading: const Icon(Icons.grade_rounded),
+                title: Text(year),
+                onTap: () => Navigator.of(ctx).pop(year),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (picked == null || !mounted) return;
+    await _downloadEventAttendance(yearLevel: picked.isEmpty ? null : picked);
   }
 
   void _showMessage(String message) {
@@ -206,28 +267,27 @@ class _EventAttendanceBrowseScreenState
                   backgroundColor: Colors.white.withValues(alpha: 0.18),
                 ),
               ),
-              trailing: _course != null
-                  ? null
-                  : _event != null
-                      ? IconButton(
-                          tooltip: 'Download attendance CSV',
-                          onPressed: _exporting ? null : _downloadEventAttendance,
-                          icon: _exporting
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Icon(Icons.download_rounded,
-                                  color: Colors.white),
-                          style: IconButton.styleFrom(
-                            backgroundColor:
-                                Colors.white.withValues(alpha: 0.15),
-                          ),
-                        )
+              trailing: _event != null
+                  ? IconButton(
+                      tooltip: 'Download attendance CSV',
+                      onPressed:
+                          _exporting ? null : _showDownloadSheet,
+                      icon: _exporting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.download_rounded,
+                              color: Colors.white),
+                      style: IconButton.styleFrom(
+                        backgroundColor:
+                            Colors.white.withValues(alpha: 0.15),
+                      ),
+                    )
                   : IconButton(
                       onPressed: _loadEvents,
                       icon: const Icon(Icons.refresh_rounded,
@@ -338,8 +398,13 @@ class _EventAttendanceBrowseScreenState
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         itemCount: records.length,
         separatorBuilder: (_, _) => const SizedBox(height: 10),
-        itemBuilder: (context, index) =>
-            AttendanceCard(record: records[index]),
+        itemBuilder: (context, index) {
+          final record = records[index];
+          return AttendanceCard(
+            record: record,
+            onTap: () => AttendanceDetailSheet.show(context, record),
+          );
+        },
       ),
     );
   }

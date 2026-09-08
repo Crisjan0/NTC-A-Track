@@ -410,6 +410,55 @@ class FirebaseDatabaseService implements DatabaseServiceInterface {
     return ref.id;
   }
 
+  @override
+  Future<List<Attendance>> findDayAttendance(
+    String studentId,
+    String date,
+    String eventId,
+  ) async {
+    final snap = await _db
+        .collection(kAttendanceTable)
+        .where('student_id', isEqualTo: studentId.trim())
+        .where('date', isEqualTo: date)
+        .where('event_id', isEqualTo: eventId)
+        .get();
+    return snap.docs.map((d) => Attendance.fromMap(_withId(d))).toList();
+  }
+
+  @override
+  Future<bool> syncTimeInOutDayStatus(
+    String studentId,
+    String date,
+    String eventId,
+  ) async {
+    final snap = await _db
+        .collection(kAttendanceTable)
+        .where('student_id', isEqualTo: studentId.trim())
+        .where('date', isEqualTo: date)
+        .where('event_id', isEqualTo: eventId)
+        .get();
+    const required = {
+      CheckType.amIn,
+      CheckType.amOut,
+      CheckType.pmIn,
+      CheckType.pmOut,
+    };
+    final have = <String>{};
+    for (final d in snap.docs) {
+      final check = d.data()['check_type']?.toString() ?? '';
+      if (required.contains(check)) have.add(check);
+    }
+    final complete = have.containsAll(required);
+    final status =
+        complete ? AttendanceStatus.present : AttendanceStatus.incomplete;
+    final batch = _db.batch();
+    for (final d in snap.docs) {
+      batch.update(d.reference, {'status': status});
+    }
+    await batch.commit();
+    return complete;
+  }
+
   /// Student + event lookup maps for enriching attendance rows.
   Future<_JoinMaps> _joinMaps() async {
     final studentsSnap = await _db.collection(kStudentsTable).get();
@@ -537,15 +586,26 @@ class FirebaseDatabaseService implements DatabaseServiceInterface {
   }
 
   @override
-  Future<int> countAttendanceOn(String date, {String? eventId}) async {
+  Future<int> countAttendanceOn(String date, {String? eventId, String? status}) async {
+    // Counts DISTINCT students, not rows: Time In/Out events store up to
+    // 4 records per student per day (AM/PM in/out) but each student counts
+    // once as present.
     Query<Map<String, dynamic>> query = _db
         .collection(kAttendanceTable)
         .where('date', isEqualTo: date);
     if (eventId != null) {
       query = query.where('event_id', isEqualTo: eventId);
     }
-    final agg = await query.count().get();
-    return agg.count ?? 0;
+    if (status != null && status.isNotEmpty) {
+      query = query.where('status', isEqualTo: status);
+    }
+    final snap = await query.get();
+    final students = <String>{};
+    for (final d in snap.docs) {
+      final studentNo = d.data()['student_id']?.toString() ?? '';
+      if (studentNo.isNotEmpty) students.add(studentNo);
+    }
+    return students.length;
   }
 
   // --------------------------------------------------------------- Seed data

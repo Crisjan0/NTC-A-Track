@@ -27,12 +27,18 @@ class AttendanceResult {
 
 /// Aggregated stats shown on the admin dashboard.
 ///
-/// [presentToday] / [absentToday] are scoped to the *active event* so the
-/// dashboard agrees with what the admin is actually scanning for (e.g.
-/// Intrams), instead of mixing in records from other events.
+/// Counts are DISTINCT students for the *active event* today (one student
+/// = 1 even with AM/PM Time In/Out checks):
+/// - [presentToday]: complete days (one-time scans, or all four AM/PM
+///   checks for Time In/Out events).
+/// - [incompleteToday]: partial Time In/Out days (some checks missing).
+/// - [absentToday]: no record at all today. The app never stores ABSENT
+///   rows; use [absentStudentsToday] / [incompleteStudentsToday] to list
+///   the students behind the numbers.
 class DashboardStats {
   final int totalStudents;
   final int presentToday;
+  final int incompleteToday;
   final int absentToday;
   final int totalAttendance;
 
@@ -42,6 +48,7 @@ class DashboardStats {
   const DashboardStats({
     required this.totalStudents,
     required this.presentToday,
+    required this.incompleteToday,
     required this.absentToday,
     required this.totalAttendance,
     this.eventName,
@@ -125,16 +132,32 @@ class AttendanceService {
       studentId: studentId,
       date: now,
       time: now,
-      status: AttendanceStatus.present,
+      status: event.usesTimeInOut
+          ? AttendanceStatus.incomplete
+          : AttendanceStatus.present,
       checkType: effectiveCheck,
       eventId: event.id,
       createdAt: now,
     );
     await _db.insertAttendance(record);
 
+    // Time In/Out days stay INCOMPLETE until all four AM/PM checks exist;
+    // the sync updates every row of the day (including this one).
+    var finalStatus = record.status;
+    if (event.usesTimeInOut) {
+      final complete = await _db.syncTimeInOutDayStatus(
+        studentId,
+        date,
+        event.id!,
+      );
+      finalStatus = complete
+          ? AttendanceStatus.present
+          : AttendanceStatus.incomplete;
+    }
+
     return AttendanceResult(
       type: AttendanceResultType.success,
-      attendance: record,
+      attendance: record.copyWith(status: finalStatus),
       student: student,
       eventName: event.name,
     );
@@ -173,14 +196,65 @@ class AttendanceService {
     final totalStudents = await _db.countStudents();
     final event = await _db.ensureActiveEvent();
     final today = Formatters.dbDate(DateTime.now());
-    final presentToday = await _db.countAttendanceOn(today, eventId: event.id!);
+    final presentToday = await _db.countAttendanceOn(
+      today,
+      eventId: event.id!,
+      status: AttendanceStatus.present,
+    );
+    final incompleteToday = await _db.countAttendanceOn(
+      today,
+      eventId: event.id!,
+      status: AttendanceStatus.incomplete,
+    );
+    final absentToday =
+        (totalStudents - presentToday - incompleteToday).clamp(0, totalStudents);
     return DashboardStats(
       totalStudents: totalStudents,
       presentToday: presentToday,
-      absentToday: (totalStudents - presentToday).clamp(0, totalStudents),
+      incompleteToday: incompleteToday,
+      absentToday: absentToday,
       totalAttendance: await _db.countAttendance(),
       eventName: event.name,
     );
+  }
+
+  /// Students with NO record today for the active event (true no-shows).
+  /// Sorted by Student ID.
+  Future<List<Student>> absentStudentsToday() async {
+    final event = await _db.ensureActiveEvent();
+    final today = Formatters.dbDate(DateTime.now());
+    final todaysRecords = await _db.queryAttendance(
+      date: today,
+      eventId: event.id!,
+    );
+    final seenIds = {
+      for (final r in todaysRecords) r.studentId,
+    };
+    final all = await _db.getAllStudents();
+    final absent =
+        all.where((s) => !seenIds.contains(s.studentId)).toList();
+    absent.sort((a, b) => a.studentId.compareTo(b.studentId));
+    return absent;
+  }
+
+  /// Students with a PARTIAL Time In/Out day today for the active event
+  /// (some AM/PM checks still missing). Sorted by Student ID.
+  Future<List<Student>> incompleteStudentsToday() async {
+    final event = await _db.ensureActiveEvent();
+    final today = Formatters.dbDate(DateTime.now());
+    final partial = await _db.queryAttendance(
+      date: today,
+      eventId: event.id!,
+      status: AttendanceStatus.incomplete,
+    );
+    final incompleteIds = {
+      for (final r in partial) r.studentId,
+    };
+    final all = await _db.getAllStudents();
+    final incomplete =
+        all.where((s) => incompleteIds.contains(s.studentId)).toList();
+    incomplete.sort((a, b) => a.studentId.compareTo(b.studentId));
+    return incomplete;
   }
 
   Future<List<Attendance>> recentAttendance({int limit = 8}) =>
@@ -202,6 +276,23 @@ class AttendanceService {
         status: status,
         eventId: eventId,
       );
+
+  /// All Time In/Out checks for one student on one day for one event,
+  /// keyed by check type ([CheckType.amIn], [CheckType.amOut],
+  /// [CheckType.pmIn], [CheckType.pmOut]). Missing slots simply have no
+  /// entry (not yet scanned).
+  Future<Map<String, Attendance>> dayChecks(
+    String studentId,
+    String date,
+    String eventId,
+  ) async {
+    final records = await _db.findDayAttendance(
+      studentId.trim(),
+      date,
+      eventId,
+    );
+    return {for (final r in records) r.checkType: r};
+  }
 
   /// A student's own history: every school day (dates that appear anywhere
   /// in attendance) marked PRESENT or ABSENT for this student.

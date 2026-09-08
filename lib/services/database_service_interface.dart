@@ -7,13 +7,12 @@ import '../utils/constants.dart';
 import '../utils/password_hash.dart';
 
 /// Abstract interface for database services.
-/// Implementations: [DatabaseService] (SQLite), [SupabaseDatabaseService] (Supabase).
+/// Implementation: [FirebaseDatabaseService] (Cloud Firestore).
 abstract class DatabaseServiceInterface {
   // Users (Admins)
   Future<User?> getUserByUsername(String username);
   Future<List<User>> getAllUsers();
   Future<String> insertUser(User user);
-  Future<Map<String, String>> updateUserPassword(String userId, String plainPassword);
   Future<bool> updateUser(User user, {String? newUsername, String? newRole});
   Future<bool> deleteUser(String userId, {String? currentUserId});
 

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../models/user_model.dart';
+import '../../services/auth_link.dart';
 import '../../services/database_service_factory.dart';
-import '../../services/database_service_interface.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/constants.dart';
 
@@ -53,10 +53,18 @@ class _UserFormDialogState extends State<UserFormDialog> {
     final db = DatabaseServiceFactory.instance;
 
     if (_isEditing) {
+      final oldUsername = widget.user!.username;
+      final newUsername = _usernameController.text.trim();
       await db.updateUser(
         widget.user!,
-        newUsername: _usernameController.text.trim(),
+        newUsername: newUsername,
       );
+      if (oldUsername != newUsername) {
+        await AuthLink.moveAdminKey(
+          oldUsername: oldUsername,
+          newUsername: newUsername,
+        );
+      }
       if (!mounted) return;
       Navigator.of(context).pop(true);
       return;
@@ -73,15 +81,19 @@ class _UserFormDialogState extends State<UserFormDialog> {
     } else {
       password = _passwordController.text.trim();
     }
-    final creds = DatabaseServiceInterface.hashPassword(password);
     final newUser = User(
       username: _usernameController.text.trim(),
-      passwordHash: creds['hash']!,
-      salt: creds['salt']!,
+      passwordHash: kManagedByFirebaseAuth,
+      salt: kManagedByFirebaseAuth,
       role: 'admin',
       createdAt: DateTime.now(),
     );
-    await db.insertUser(newUser);
+    final docId = await db.insertUser(newUser);
+    await AuthLink.provisionAdmin(
+      username: newUser.username,
+      password: password,
+      docId: docId,
+    );
 
     if (!mounted) return;
     Navigator.of(context).pop(true);

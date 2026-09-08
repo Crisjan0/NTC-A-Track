@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../models/user_model.dart';
+import '../../services/auth_link.dart';
+import '../../services/auth_service.dart';
 import '../../utils/formatters.dart';
 import '../../services/database_service_factory.dart';
 import '../../services/database_service_interface.dart';
@@ -10,6 +12,7 @@ import '../../utils/constants.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/glass_panel.dart';
 import '../../widgets/gradient_header.dart';
+import '../auth/login_screen.dart';
 import 'user_form_dialog.dart';
 
 /// Admin screen for managing admin user accounts: list, search, add, edit
@@ -44,19 +47,27 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
   Future<void> _load() async {
     setState(() => _loading = true);
-    final users = await _db.getAllUsers();
-    final filtered = _search == null || _search!.isEmpty
-        ? users
-        : users
-            .where((u) =>
-                u.username.contains(_search!) ||
-                u.role.contains(_search!))
-            .toList();
-    if (!mounted) return;
-    setState(() {
-      _users = filtered;
-      _loading = false;
-    });
+    try {
+      final users = await _db.getAllUsers();
+      final filtered = _search == null || _search!.isEmpty
+          ? users
+          : users
+              .where((u) =>
+                  u.username.contains(_search!) ||
+                  u.role.contains(_search!))
+              .toList();
+      if (!mounted) return;
+      setState(() {
+        _users = filtered;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load users: $e')),
+      );
+    }
   }
 
   Future<void> _openAdd() async {
@@ -75,7 +86,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
   Future<void> _confirmDelete(User user) async {
     final session = SessionService.instance.current;
-    final message = session?.username == user.username
+    final isSelf = session?.username == user.username;
+    final message = isSelf
         ? 'You cannot delete your own admin account. Change your password '
             'or username instead.'
         : 'This will permanently remove ${user.username} from the system. '
@@ -105,17 +117,41 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
     if (confirmed != true) return;
 
-    final ok = await _db.deleteUser(
-      user.id!,
-      currentUserId: session?.username == user.username ? user.id : null,
-    );
-    if (!mounted) return;
-    if (!ok) {
+    if (isSelf) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cannot delete your own account')),
       );
       return;
     }
+
+    if (user.id == null || user.id!.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid user id')),
+      );
+      return;
+    }
+
+    bool ok = false;
+    try {
+      ok = await _db.deleteUser(user.id!);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Delete failed: $e')),
+      );
+      return;
+    }
+    if (!mounted) return;
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User not found or cannot be deleted')),
+      );
+      return;
+    }
+    await AuthLink.removeAdminLogin(user.username);
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('${user.username} deleted successfully')),
     );
@@ -215,8 +251,45 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       return;
     }
 
-    await _db.updateUserPassword(user.id!, password);
+    if (user.id == null || user.id!.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid user id')),
+      );
+      return;
+    }
+
+    try {
+      await AuthLink.resetAdminPassword(
+        username: user.username,
+        docId: user.id!,
+        newPassword: password,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Password reset failed: $e')),
+      );
+      return;
+    }
     if (!mounted) return;
+    // Resetting your own password invalidates the current session —
+    // log out so you can sign back in with the new password.
+    final session = SessionService.instance.current;
+    if (session?.username == user.username) {
+      await AuthService.instance.logout();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Password updated. Please log in again.'),
+        ),
+      );
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (_) => false,
+      );
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('${user.username} password updated')),
     );
@@ -237,7 +310,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: TextField(
               controller: _searchController,
-              onChanged: (_) => _load(),
+              onChanged: (v) {
+                _search = v;
+                _load();
+              },
               decoration: InputDecoration(
                 hintText: 'Search by username or role…',
                 prefixIcon: const Icon(Icons.search_rounded),
@@ -246,6 +322,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     : IconButton(
                         onPressed: () {
                           _searchController.clear();
+                          _search = null;
                           _load();
                         },
                         icon: const Icon(Icons.close_rounded),
@@ -318,7 +395,6 @@ class _UserCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = AppTheme.paletteOf(context);
-    final isCurrent = SessionService.instance.current?.username == user.username;
     final initials = _initials(user.username);
 
     return GlassPanel(
@@ -420,18 +496,17 @@ class _UserCard extends StatelessWidget {
                   ],
                 ),
               ),
-              if (!isCurrent)
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete_rounded, size: 20, color: AppColors.danger),
-                      SizedBox(width: 10),
-                      Text('Delete Account',
-                          style: TextStyle(color: AppColors.danger)),
-                    ],
-                  ),
+              const PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_rounded, size: 20, color: AppColors.danger),
+                    SizedBox(width: 10),
+                    Text('Delete Account',
+                        style: TextStyle(color: AppColors.danger)),
+                  ],
                 ),
+              ),
             ],
           ),
         ],

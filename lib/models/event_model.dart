@@ -28,7 +28,7 @@ class AttendanceEvent {
   bool get usesTimeInOut => flowType == EventFlowType.timeInOut;
 
   factory AttendanceEvent.fromMap(Map<String, dynamic> map) => AttendanceEvent(
-        id: map['id'] as String?,
+        id: map['id']?.toString(),
         name: map['name'] as String,
         isActive: map['is_active'] as bool? ?? false,
         flowType: map['flow_type'] as String? ?? EventFlowType.oneTime,

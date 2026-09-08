@@ -78,13 +78,13 @@ class Attendance {
     final timeStr = map['time'] as String;
     final timeParts = timeStr.split(':').map(int.parse).toList();
     return Attendance(
-      id: map['id'] as String?,
-      studentId: map['student_id'] as String,
+      id: map['id']?.toString(),
+      studentId: map['student_id'].toString(),
       date: date,
       time: DateTime(date.year, date.month, date.day, timeParts[0], timeParts[1]),
       status: map['status'] as String? ?? 'PRESENT',
       checkType: map['check_type'] as String? ?? CheckType.present,
-      eventId: map['event_id'] as String?,
+      eventId: map['event_id']?.toString(),
       createdAt: DateTime.parse(map['created_at'] as String),
       studentName: map['full_name'] as String?,
       course: map['course'] as String?,

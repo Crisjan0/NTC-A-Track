@@ -77,6 +77,7 @@ class _EditStudentScreenState extends State<EditStudentScreen> {
       await StudentService.instance.updateStudent(
         updated,
         newPassword: data.password.isEmpty ? null : data.password,
+        previousStudentId: widget.student.studentId,
       );
 
       if (!mounted) return;

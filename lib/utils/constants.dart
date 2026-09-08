@@ -292,6 +292,11 @@ class DemoCredentials {
 /// (or the admin can) through the edit flow.
 const String kDefaultStudentPassword = 'northlink';
 
+/// Marker stored in `password_hash` / `salt` for accounts whose real
+/// credential lives in Firebase Authentication. Nothing in the app reads
+/// these values anymore; they only satisfy the data model.
+const String kManagedByFirebaseAuth = 'firebase-auth';
+
 class AppSpacing {
   AppSpacing._();
 

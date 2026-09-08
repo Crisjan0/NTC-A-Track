@@ -1,5 +1,6 @@
 import '../models/student_model.dart';
 import '../utils/constants.dart';
+import 'auth_link.dart';
 import 'database_service_factory.dart';
 import 'database_service_interface.dart';
 
@@ -53,6 +54,7 @@ class StudentService {
       _db.getStudentById(studentId);
 
   /// Adds a student; throws [StudentException] if the ID is already taken.
+  /// Also provisions the Firebase Auth login for the student.
   Future<void> addStudent({
     required String studentId,
     required String lastName,
@@ -66,23 +68,33 @@ class StudentService {
       throw StudentException('Student ID "$cleanedId" is already in use.');
     }
 
-    final creds = DatabaseServiceInterface.hashPassword(password);
-    await _db.insertStudent(Student(
+    final docId = await _db.insertStudent(Student(
       studentId: cleanedId,
       lastName: lastName.trim(),
       firstName: firstName.trim(),
       course: course,
       yearLevel: yearLevel,
-      passwordHash: creds['hash']!,
-      salt: creds['salt']!,
+      passwordHash: kManagedByFirebaseAuth,
+      salt: kManagedByFirebaseAuth,
       createdAt: DateTime.now(),
     ));
+    try {
+      await AuthLink.provisionStudent(
+        studentId: cleanedId,
+        password: password,
+        docId: docId,
+      );
+    } catch (e) {
+      // Firestore doc exists without a login — surface it so the admin
+      // can retry (re-adding bumps the version and heals it).
+      throw StudentException('Student saved but login setup failed: $e');
+    }
   }
 
   /// Inserts a batch of imported students. Every row is given the shared
-  /// default password [kDefaultStudentPassword]; rows whose student ID is
-  /// already in the database (or duplicated inside the same batch) are
-  /// skipped and reported in the result.
+  /// default password [kDefaultStudentPassword] (and a Firebase Auth login);
+  /// rows whose student ID is already in the database (or duplicated inside
+  /// the same batch) are skipped and reported in the result.
   Future<StudentImportResult> importStudents(
     List<StudentImportRow> rows,
   ) async {
@@ -110,17 +122,27 @@ class StudentService {
         continue;
       }
 
-      final creds = DatabaseServiceInterface.hashPassword(kDefaultStudentPassword);
-      await _db.insertStudent(Student(
-        studentId: id,
-        lastName: row.lastName.trim(),
-        firstName: row.firstName.trim(),
-        course: row.course.trim(),
-        yearLevel: row.yearLevel.trim(),
-        passwordHash: creds['hash']!,
-        salt: creds['salt']!,
-        createdAt: DateTime.now(),
-      ));
+      try {
+        final docId = await _db.insertStudent(Student(
+          studentId: id,
+          lastName: row.lastName.trim(),
+          firstName: row.firstName.trim(),
+          course: row.course.trim(),
+          yearLevel: row.yearLevel.trim(),
+          passwordHash: kManagedByFirebaseAuth,
+          salt: kManagedByFirebaseAuth,
+          createdAt: DateTime.now(),
+        ));
+        await AuthLink.provisionStudent(
+          studentId: id,
+          password: kDefaultStudentPassword,
+          docId: docId,
+        );
+      } catch (e) {
+        skipped.add(row);
+        skippedReasons.add('Login setup failed: $e');
+        continue;
+      }
       seen.add(id);
       imported++;
     }
@@ -144,31 +166,51 @@ class StudentService {
     return null;
   }
 
-  /// Updates an existing student, optionally re-hashing a new password.
+  /// Updates an existing student. A [newPassword] rotates the Firebase Auth
+  /// login (version bump); a changed student ID moves the login mapping.
+  /// Pass [previousStudentId] when the ID may have changed.
   Future<void> updateStudent(
     Student student, {
     String? newPassword,
+    String? previousStudentId,
   }) async {
-    var updated = student;
-    if (newPassword != null && newPassword.isNotEmpty) {
-      final creds = DatabaseServiceInterface.hashPassword(newPassword);
-      updated = Student(
-        id: student.id,
-        studentId: student.studentId,
-        lastName: student.lastName,
-        firstName: student.firstName,
-        course: student.course,
-        yearLevel: student.yearLevel,
-        passwordHash: creds['hash']!,
-        salt: creds['salt']!,
-        createdAt: student.createdAt,
+    final updated = Student(
+      id: student.id,
+      studentId: student.studentId,
+      lastName: student.lastName,
+      firstName: student.firstName,
+      course: student.course,
+      yearLevel: student.yearLevel,
+      passwordHash: kManagedByFirebaseAuth,
+      salt: kManagedByFirebaseAuth,
+      createdAt: student.createdAt,
+    );
+    await _db.updateStudent(updated);
+
+    final oldId = (previousStudentId ?? student.studentId).trim();
+    final newId = student.studentId.trim();
+    if (oldId != newId) {
+      await AuthLink.moveStudentKey(
+        oldStudentId: oldId,
+        newStudentId: newId,
       );
     }
-    await _db.updateStudent(updated);
+    if (newPassword != null && newPassword.isNotEmpty) {
+      if (student.id == null) {
+        throw StudentException('Cannot change password: missing record id.');
+      }
+      await AuthLink.resetStudentPassword(
+        studentId: newId,
+        docId: student.id!,
+        newPassword: newPassword,
+      );
+    }
   }
 
-  Future<void> deleteStudent(Student student) =>
-      _db.deleteStudent(student.id!);
+  Future<void> deleteStudent(Student student) async {
+    await _db.deleteStudent(student.id!);
+    await AuthLink.removeStudentLogin(student.studentId);
+  }
 
   /// Students filtered by search text (ID or name), course and year level.
   Future<List<Student>> searchAndFilter({

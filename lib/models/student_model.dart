@@ -35,7 +35,7 @@ class Student {
   }
 
   factory Student.fromMap(Map<String, dynamic> map) => Student(
-        id: map['id'] as String?,
+        id: map['id']?.toString(),
         studentId: map['student_id'] as String,
         lastName: map['last_name'] as String,
         firstName: map['first_name'] as String,

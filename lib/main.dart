@@ -13,7 +13,12 @@ import 'widgets/liquid_background.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await DatabaseServiceFactory.initialize();
-  await DatabaseServiceFactory.instance.seedDemoData();
+  try {
+    await DatabaseServiceFactory.instance.seedDemoData();
+  } catch (_) {
+    // Seeding is best effort (e.g. offline first launch) — the app still
+    // boots to login and every screen surfaces its own errors.
+  }
   runApp(const AttendanceApp());
 }
 

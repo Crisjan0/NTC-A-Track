@@ -11,7 +11,7 @@ class Course {
   });
 
   factory Course.fromMap(Map<String, dynamic> map) => Course(
-        id: map['id'] as String?,
+        id: map['id']?.toString(),
         name: map['course_name'] as String,
         createdAt: DateTime.parse(map['created_at'] as String),
       );

@@ -17,7 +17,7 @@ class User {
   });
 
   factory User.fromMap(Map<String, dynamic> map) => User(
-        id: map['id'] as String?,
+        id: map['id']?.toString(),
         username: map['username'] as String,
         passwordHash: map['password_hash'] as String,
         salt: map['salt'] as String,

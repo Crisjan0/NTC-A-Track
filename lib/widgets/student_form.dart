@@ -4,6 +4,7 @@ import '../models/student_model.dart';
 import '../utils/app_theme.dart';
 import '../utils/constants.dart';
 import '../utils/validators.dart';
+import '../utils/year_level.dart';
 
 /// Data collected by [StudentForm].
 class StudentFormData {
@@ -67,10 +68,17 @@ class StudentFormState extends State<StudentForm> {
     _passwordController = TextEditingController();
     _course = s?.course;
     _yearLevel = s?.yearLevel;
+    // Rebuild so the auto year-level preview updates while typing the ID.
+    _idController.addListener(_onIdChanged);
+  }
+
+  void _onIdChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _idController.removeListener(_onIdChanged);
     _idController.dispose();
     _lastNameController.dispose();
     _firstNameController.dispose();
@@ -79,14 +87,23 @@ class StudentFormState extends State<StudentForm> {
   }
 
   /// Validates and returns the collected data, or null if invalid.
+  ///
+  /// Year level is AUTO-DERIVED from the Student ID (`YYYY-XXXX`).
+  /// The manual dropdown is only a fallback for non-standard IDs.
   StudentFormData? validate() {
     if (!_formKey.currentState!.validate()) return null;
+    final id = _idController.text.trim();
+    final autoYear = YearLevelAuto.derive(id);
+    final yearLevel = autoYear ?? _yearLevel;
+    if (_course == null || yearLevel == null || yearLevel.isEmpty) {
+      return null;
+    }
     return StudentFormData(
-      studentId: _idController.text.trim(),
+      studentId: id,
       lastName: _lastNameController.text.trim(),
       firstName: _firstNameController.text.trim(),
       course: _course!,
-      yearLevel: _yearLevel!,
+      yearLevel: yearLevel,
       password: _passwordController.text,
     );
   }
@@ -149,17 +166,76 @@ class StudentFormState extends State<StudentForm> {
             onChanged: (v) => setState(() => _course = v),
           ),
           const SizedBox(height: 14),
-          DropdownButtonFormField<String>(
-            initialValue: _yearLevel,
-            validator: (v) => Validators.picker(v, field: 'Year level'),
-            decoration: const InputDecoration(
-              labelText: 'Year Level',
-              prefixIcon: Icon(Icons.grade_rounded),
-            ),
-            items: kYearLevels
-                .map((y) => DropdownMenuItem(value: y, child: Text(y)))
-                .toList(),
-            onChanged: (v) => setState(() => _yearLevel = v),
+          Builder(
+            builder: (context) {
+              final autoYear =
+                  YearLevelAuto.derive(_idController.text.trim());
+              if (autoYear != null) {
+                // Automatic mode: derived from Student ID, no manual input.
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 14),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                        color: Theme.of(context).dividerColor),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.grade_rounded),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Year Level (Auto)',
+                              style: TextStyle(
+                                  fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              autoYear,
+                              style: const TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.w700),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.successLight,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'AUTO',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.success,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              // Fallback: non-standard ID (e.g. 12345) -> manual pick.
+              return DropdownButtonFormField<String>(
+                initialValue: _yearLevel,
+                validator: (v) => Validators.picker(v, field: 'Year level'),
+                decoration: const InputDecoration(
+                  labelText: 'Year Level (manual — ID has no year)',
+                  prefixIcon: Icon(Icons.grade_rounded),
+                ),
+                items: [...kYearLevels, 'Graduated']
+                    .map((y) => DropdownMenuItem(value: y, child: Text(y)))
+                    .toList(),
+                onChanged: (v) => setState(() => _yearLevel = v),
+              );
+            },
           ),
           if (widget.showPassword) ...[
             const SizedBox(height: 14),

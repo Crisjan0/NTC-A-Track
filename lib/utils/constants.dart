@@ -241,6 +241,11 @@ class AttendanceStatus {
 
   static const String present = 'PRESENT';
   static const String absent = 'ABSENT';
+
+  /// Partial Time In/Out day: at least one AM/PM check is still missing.
+  /// Only used by [EventFlowType.timeInOut] events; one-time events are
+  /// always PRESENT once scanned.
+  static const String incomplete = 'INCOMPLETE';
 }
 
 /// Attendance flow options for an event.
@@ -291,6 +296,11 @@ class DemoCredentials {
 /// Imported students all share this default; they can change it later
 /// (or the admin can) through the edit flow.
 const String kDefaultStudentPassword = 'northlink';
+
+/// Marker stored in `password_hash` / `salt` for accounts whose real
+/// credential lives in Firebase Authentication. Nothing in the app reads
+/// these values anymore; they only satisfy the data model.
+const String kManagedByFirebaseAuth = 'firebase-auth';
 
 class AppSpacing {
   AppSpacing._();

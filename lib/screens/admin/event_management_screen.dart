@@ -23,7 +23,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
   final AttendanceService _service = AttendanceService.instance;
 
   List<AttendanceEvent> _events = [];
-  Map<int, int> _counts = {};
+  Map<String, int> _counts = {};
   bool _loading = true;
 
   @override

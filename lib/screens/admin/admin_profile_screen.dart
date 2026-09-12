@@ -6,9 +6,10 @@ import '../../utils/app_theme.dart';
 import '../../utils/constants.dart';
 import '../../widgets/glass_panel.dart';
 import '../../widgets/gradient_header.dart';
+import '../../widgets/update_dialog.dart';
 import '../auth/login_screen.dart';
 
-/// Admin profile: account details + logout.
+/// Admin profile: account details + logout + app update check.
 class AdminProfileScreen extends StatelessWidget {
   const AdminProfileScreen({super.key});
 
@@ -30,16 +31,29 @@ class AdminProfileScreen extends StatelessWidget {
     return Scaffold(
       body: Column(
         children: [
-          const GradientHeader(
+          GradientHeader(
             title: 'Profile',
             subtitle: 'Account settings',
             icon: Icons.person_rounded,
+            trailing: IconButton(
+              onPressed: () => showUpdateDialog(context),
+              tooltip: 'Check for app updates',
+              icon: const Icon(
+                Icons.system_update_rounded,
+                color: Colors.white,
+                size: 22,
+              ),
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.white.withValues(alpha: 0.2),
+              ),
+            ),
           ),
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
+                  // Identity card.
                   GlassPanel(
                     radius: kCardRadius,
                     blur: 26,
@@ -52,13 +66,6 @@ class AdminProfileScreen extends StatelessWidget {
                           decoration: const BoxDecoration(
                             gradient: AppGradients.primary,
                             shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Color(0x554F46E5),
-                                blurRadius: 18,
-                                offset: Offset(0, 6),
-                              ),
-                            ],
                           ),
                           child: const Icon(
                             Icons.admin_panel_settings_rounded,
@@ -93,21 +100,6 @@ class AdminProfileScreen extends StatelessWidget {
                           icon: Icons.person_outline_rounded,
                           label: 'Username',
                           value: username,
-                        ),
-                        _ProfileRow(
-                          icon: Icons.admin_panel_settings_rounded,
-                          label: 'Role',
-                          value: 'Admin',
-                        ),
-                        _ProfileRow(
-                          icon: Icons.storage_rounded,
-                          label: 'Database',
-                          value: 'Local SQLite (demo)',
-                        ),
-                        _ProfileRow(
-                          icon: Icons.lock_outline_rounded,
-                          label: 'Security',
-                          value: 'Hashed passwords',
                         ),
                       ],
                     ),
@@ -168,12 +160,15 @@ class _ProfileRow extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: p.textPrimary,
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: p.textPrimary,
+              ),
             ),
           ),
         ],

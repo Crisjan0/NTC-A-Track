@@ -1,6 +1,6 @@
 /// Represents a system user account (currently the Admin).
 class User {
-  final int? id;
+  final String? id;
   final String username;
   final String passwordHash;
   final String salt;
@@ -17,7 +17,7 @@ class User {
   });
 
   factory User.fromMap(Map<String, dynamic> map) => User(
-        id: map['id'] as int?,
+        id: map['id']?.toString(),
         username: map['username'] as String,
         passwordHash: map['password_hash'] as String,
         salt: map['salt'] as String,

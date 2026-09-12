@@ -11,11 +11,13 @@ import 'status_chip.dart';
 class AttendanceCard extends StatelessWidget {
   final Attendance record;
   final bool showStudent;
+  final VoidCallback? onTap;
 
   const AttendanceCard({
     super.key,
     required this.record,
     this.showStudent = true,
+    this.onTap,
   });
 
   @override
@@ -26,6 +28,7 @@ class AttendanceCard extends StatelessWidget {
     return GlassPanel(
       radius: 18,
       blur: 22,
+      onTap: onTap,
       padding: const EdgeInsets.all(14),
       child: Row(
         children: [

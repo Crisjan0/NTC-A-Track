@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../services/auth_link.dart';
 import '../../services/auth_service.dart';
 import '../../services/login_rate_limiter.dart';
 import '../../utils/validators.dart';

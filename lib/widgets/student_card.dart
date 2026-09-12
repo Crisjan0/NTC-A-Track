@@ -79,7 +79,7 @@ class StudentCard extends StatelessWidget {
                               ),
                               _InfoTag(
                                 icon: Icons.grade_rounded,
-                                label: student.yearLevel,
+                                label: student.displayYearLevel,
                               ),
                             ],
                           ),

@@ -8,6 +8,7 @@ import '../../utils/constants.dart';
 import '../../widgets/avatar.dart';
 import '../../widgets/glass_panel.dart';
 import '../../widgets/gradient_header.dart';
+import '../../widgets/update_dialog.dart';
 import '../auth/login_screen.dart';
 
 /// Student profile: personal details + logout.
@@ -34,10 +35,22 @@ class StudentProfileScreen extends StatelessWidget {
         return Scaffold(
           body: Column(
             children: [
-              const GradientHeader(
+              GradientHeader(
                 title: 'Profile',
                 subtitle: 'Your account information',
                 icon: Icons.person_rounded,
+                trailing: IconButton(
+                  onPressed: () => showUpdateDialog(context),
+                  tooltip: 'Check for app updates',
+                  icon: const Icon(
+                    Icons.system_update_rounded,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.white.withValues(alpha: 0.2),
+                  ),
+                ),
               ),
               Expanded(
                 child: student == null
@@ -46,6 +59,7 @@ class StudentProfileScreen extends StatelessWidget {
                         padding: const EdgeInsets.all(20),
                         child: Column(
                           children: [
+                            // Identity card.
                             GlassPanel(
                               radius: kCardRadius,
                               blur: 26,
@@ -63,8 +77,8 @@ class StudentProfileScreen extends StatelessWidget {
                                     style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.w800,
-                                      color:
-                                          AppTheme.paletteOf(context).textPrimary,
+                                      color: AppTheme.paletteOf(context)
+                                          .textPrimary,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
@@ -94,7 +108,7 @@ class StudentProfileScreen extends StatelessWidget {
                                   _ProfileRow(
                                     icon: Icons.grade_rounded,
                                     label: 'Year Level',
-                                    value: student.yearLevel,
+                                    value: student.displayYearLevel,
                                   ),
                                   _ProfileRow(
                                     icon: Icons.person_outline_rounded,

@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../../models/attendance_model.dart';
+import '../../models/student_model.dart';
 import '../../services/attendance_service.dart';
 import '../../services/session_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/constants.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/attendance_card.dart';
+import '../../widgets/attendance_detail_sheet.dart';
 import '../../widgets/dashboard_card.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/glass_panel.dart';
@@ -26,11 +28,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
   bool _loading = true;
   int _totalStudents = 0;
   int _presentToday = 0;
+  int _incompleteToday = 0;
   int _absentToday = 0;
   int _totalAttendance = 0;
   List<Attendance> _recent = [];
+  List<Student> _absentStudents = [];
+  List<Student> _incompleteStudents = [];
   String? _activeEventName;
   bool _recentExpanded = false;
+  bool _absentExpanded = false;
+  bool _incompleteExpanded = false;
 
   @override
   void initState() {
@@ -43,13 +50,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final stats = await AttendanceService.instance.dashboardStats();
     final recent =
         await AttendanceService.instance.recentAttendance(limit: 6);
+    final absent = await AttendanceService.instance.absentStudentsToday();
+    final incomplete =
+        await AttendanceService.instance.incompleteStudentsToday();
     if (!mounted) return;
     setState(() {
       _totalStudents = stats.totalStudents;
       _presentToday = stats.presentToday;
+      _incompleteToday = stats.incompleteToday;
       _absentToday = stats.absentToday;
       _totalAttendance = stats.totalAttendance;
       _recent = recent;
+      _absentStudents = absent;
+      _incompleteStudents = incomplete;
       _activeEventName = stats.eventName;
       _loading = false;
     });
@@ -97,49 +110,50 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       child: Center(child: CircularProgressIndicator()),
                     )
                   else ...[
-                    // Summary cards.
-                    Row(
+                    // Summary cards: uniform 2x2 grid so all four cards
+                    // share exactly the same size.
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 0.95,
                       children: [
-                        Expanded(
-                          child: DashboardCard(
-                            label: 'Total Students',
-                            value: '$_totalStudents',
-                            icon: Icons.group_rounded,
-                            gradient: AppGradients.primary,
-                          ),
+                        DashboardCard(
+                          label: 'Total Students',
+                          value: '$_totalStudents',
+                          icon: Icons.group_rounded,
+                          gradient: AppGradients.primary,
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: DashboardCard(
-                            label: 'Present Today',
-                            value: '$_presentToday',
-                            icon: Icons.check_circle_rounded,
-                            gradient: AppGradients.success,
-                          ),
+                        DashboardCard(
+                          label: 'Present Today',
+                          value: '$_presentToday',
+                          icon: Icons.check_circle_rounded,
+                          gradient: AppGradients.success,
+                        ),
+                        DashboardCard(
+                          label: 'Absent Today',
+                          value: '$_absentToday',
+                          icon: Icons.cancel_rounded,
+                          gradient: AppGradients.danger,
+                        ),
+                        DashboardCard(
+                          label: 'Incomplete Today',
+                          value: '$_incompleteToday',
+                          hint: 'Missing AM/PM scans',
+                          icon: Icons.hourglass_bottom_rounded,
+                          gradient: AppGradients.warning,
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: DashboardCard(
-                            label: 'Absent Today',
-                            value: '$_absentToday',
-                            icon: Icons.cancel_rounded,
-                            gradient: AppGradients.danger,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: DashboardCard(
-                            label: 'Total Attendance',
-                            value: '$_totalAttendance',
-                            icon: Icons.event_available_rounded,
-                            gradient: AppGradients.orange,
-                          ),
-                        ),
-                      ],
+                    // Full-width total card.
+                    DashboardCard(
+                      label: 'Total Attendance',
+                      value: '$_totalAttendance',
+                      icon: Icons.event_available_rounded,
+                      gradient: AppGradients.orange,
                     ),
                     const SizedBox(height: 24),
                     const SectionTitle(title: 'Active Event'),
@@ -149,6 +163,172 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       onManage: _openEvents,
                     ),
                     const SizedBox(height: 24),
+                    // Collapsible "Absent Today" dropdown: students with no
+                    // record today for the active event.
+                    GlassPanel(
+                      radius: 16,
+                      blur: 18,
+                      padding: EdgeInsets.zero,
+                      onTap: () =>
+                          setState(() => _absentExpanded = !_absentExpanded),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                gradient: AppGradients.danger,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.person_off_rounded,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Absent Today',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppTheme.paletteOf(context).textPrimary,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '$_absentToday',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color:
+                                    AppTheme.paletteOf(context).textSecondary,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            AnimatedRotation(
+                              turns: _absentExpanded ? 0.5 : 0,
+                              duration: const Duration(milliseconds: 220),
+                              child: Icon(
+                                Icons.expand_more_rounded,
+                                color: AppTheme.paletteOf(context).textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (_absentExpanded) ...[
+                      const SizedBox(height: 12),
+                      if (_absentStudents.isEmpty)
+                        const EmptyState(
+                          icon: Icons.check_circle_rounded,
+                          title: 'No absents',
+                          subtitle:
+                              'Everyone has at least one record today for the active event',
+                        )
+                      else
+                        ..._absentStudents.map(
+                          (s) => Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: _StatusStudentRow(
+                              student: s,
+                              badgeText: 'ABSENT',
+                              badgeColor: AppColors.danger,
+                              avatarGradient: AppGradients.danger,
+                            ),
+                          ),
+                        ),
+                    ],
+                    const SizedBox(height: 12),
+                    // Collapsible "Incomplete Today" dropdown: students with
+                    // a partial Time In/Out day (missing AM/PM scans).
+                    GlassPanel(
+                      radius: 16,
+                      blur: 18,
+                      padding: EdgeInsets.zero,
+                      onTap: () => setState(
+                          () => _incompleteExpanded = !_incompleteExpanded),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                gradient: AppGradients.warning,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.hourglass_bottom_rounded,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Incomplete Today',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppTheme.paletteOf(context).textPrimary,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '$_incompleteToday',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color:
+                                    AppTheme.paletteOf(context).textSecondary,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            AnimatedRotation(
+                              turns: _incompleteExpanded ? 0.5 : 0,
+                              duration: const Duration(milliseconds: 220),
+                              child: Icon(
+                                Icons.expand_more_rounded,
+                                color: AppTheme.paletteOf(context).textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (_incompleteExpanded) ...[
+                      const SizedBox(height: 12),
+                      if (_incompleteStudents.isEmpty)
+                        const EmptyState(
+                          icon: Icons.check_circle_rounded,
+                          title: 'No incomplete records',
+                          subtitle:
+                              'Everyone either completed all scans or has no record yet',
+                        )
+                      else
+                        ..._incompleteStudents.map(
+                          (s) => Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: _StatusStudentRow(
+                              student: s,
+                              badgeText: 'INCOMPLETE',
+                              badgeColor: AppColors.warning,
+                              avatarGradient: AppGradients.warning,
+                            ),
+                          ),
+                        ),
+                    ],
+                    const SizedBox(height: 12),
                     // Collapsible "Recent Attendance" dropdown.
                     GlassPanel(
                       radius: 16,
@@ -222,7 +402,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         ..._recent.map(
                           (r) => Padding(
                             padding: const EdgeInsets.only(bottom: 10),
-                            child: AttendanceCard(record: r),
+                            child: AttendanceCard(
+                              record: r,
+                              onTap: () =>
+                                  AttendanceDetailSheet.show(context, r),
+                            ),
                           ),
                         ),
                     ],
@@ -233,6 +417,93 @@ class _AdminDashboardState extends State<AdminDashboard> {
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// One row in the "Absent Today" / "Incomplete Today" lists.
+class _StatusStudentRow extends StatelessWidget {
+  final Student student;
+  final String badgeText;
+  final Color badgeColor;
+  final LinearGradient avatarGradient;
+
+  const _StatusStudentRow({
+    required this.student,
+    required this.badgeText,
+    required this.badgeColor,
+    required this.avatarGradient,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = AppTheme.paletteOf(context);
+    return GlassPanel(
+      radius: 16,
+      blur: 18,
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              gradient: avatarGradient,
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                student.initials,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  student.fullName,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: p.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${student.studentId} · ${student.course}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: p.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: badgeColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              badgeText,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.6,
+                color: badgeColor,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

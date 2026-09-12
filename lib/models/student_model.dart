@@ -1,9 +1,15 @@
+import '../utils/year_level.dart';
+
 /// Represents a student record.
 ///
 /// For the local demo, each student also carries their own credentials
 /// (password hash + salt) so they can log in independently.
+///
+/// Year level is AUTO-DERIVED from [studentId] (`YYYY-XXXX` -> entry year)
+/// via [displayYearLevel]. The stored [yearLevel] is only a fallback for
+/// old/non-standard IDs (e.g. `12345`) — no database change needed.
 class Student {
-  final int? id;
+  final String? id;
   final String studentId;
   final String lastName;
   final String firstName;
@@ -27,6 +33,17 @@ class Student {
 
   String get fullName => '$firstName $lastName';
 
+  /// Auto year level from the Student ID (e.g. `2024-5648` -> `3rd Year`
+  /// in S.Y. 2026-2027). Falls back to the stored [yearLevel] when the ID
+  /// has no `YYYY-` prefix. Use this everywhere in the UI.
+  String get displayYearLevel => YearLevelAuto.effective(
+        studentId: studentId,
+        storedYearLevel: yearLevel,
+      );
+
+  /// True when the year level is auto-computed (not manually stored).
+  bool get isYearLevelAuto => YearLevelAuto.isAuto(studentId);
+
   /// "Juan Dela Cruz" -> "JD"
   String get initials {
     final parts = fullName.trim().split(RegExp(r'\s+'));
@@ -35,7 +52,7 @@ class Student {
   }
 
   factory Student.fromMap(Map<String, dynamic> map) => Student(
-        id: map['id'] as int?,
+        id: map['id']?.toString(),
         studentId: map['student_id'] as String,
         lastName: map['last_name'] as String,
         firstName: map['first_name'] as String,

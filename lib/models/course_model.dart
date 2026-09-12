@@ -1,6 +1,6 @@
 /// Represents an academic course managed by the admin.
 class Course {
-  final int? id;
+  final String? id;
   final String name;
   final DateTime createdAt;
 
@@ -11,7 +11,7 @@ class Course {
   });
 
   factory Course.fromMap(Map<String, dynamic> map) => Course(
-        id: map['id'] as int?,
+        id: map['id']?.toString(),
         name: map['course_name'] as String,
         createdAt: DateTime.parse(map['created_at'] as String),
       );

@@ -7,6 +7,7 @@ import '../../utils/app_theme.dart';
 import '../../utils/constants.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/attendance_card.dart';
+import '../../widgets/attendance_detail_sheet.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/glass_panel.dart';
 import '../../widgets/gradient_header.dart';
@@ -35,7 +36,7 @@ class _AttendanceManagementScreenState
   String? _course;
   String? _yearLevel;
   String? _status;
-  int? _eventId;
+  String? _eventId;
 
   @override
   void initState() {
@@ -277,8 +278,14 @@ class _AttendanceManagementScreenState
                           itemCount: _records.length,
                           separatorBuilder: (_, _) =>
                               const SizedBox(height: 10),
-                          itemBuilder: (context, index) =>
-                              AttendanceCard(record: _records[index]),
+                          itemBuilder: (context, index) {
+                            final record = _records[index];
+                            return AttendanceCard(
+                              record: record,
+                              onTap: () =>
+                                  AttendanceDetailSheet.show(context, record),
+                            );
+                          },
                         ),
                       ),
           ),
@@ -325,6 +332,7 @@ class _AttendanceManagementScreenState
       title: 'Filter by Status',
       items: const [
         AttendanceStatus.present,
+        AttendanceStatus.incomplete,
         AttendanceStatus.absent,
       ],
     );

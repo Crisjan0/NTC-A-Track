@@ -155,7 +155,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                           const SizedBox(height: 8),
                           _InfoLine(
                             label: 'Year Level',
-                            value: student.yearLevel,
+                            value: student.displayYearLevel,
                           ),
                         ],
                       ),

@@ -1,0 +1,72 @@
+// File generated manually from android/app/google-services.json
+// (equivalent output of `flutterfire configure` for Android).
+//
+// If you later add iOS / Web / Windows / macOS apps in the Firebase
+// console, re-run `flutterfire configure` to regenerate this file.
+
+import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kIsWeb, TargetPlatform;
+
+/// Default [FirebaseOptions] for use with your Firebase apps.
+///
+/// Example:
+/// ```dart
+/// import 'firebase_options.dart';
+/// // ...
+/// await Firebase.initializeApp(
+///   options: DefaultFirebaseOptions.currentPlatform,
+/// );
+/// ```
+class DefaultFirebaseOptions {
+  static FirebaseOptions get currentPlatform {
+    if (kIsWeb) {
+      throw UnsupportedError(
+        'DefaultFirebaseOptions have not been configured for web - '
+        'you can reconfigure this by running the FlutterFire CLI again.',
+      );
+    }
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return android;
+      case TargetPlatform.iOS:
+        return ios;
+      case TargetPlatform.macOS:
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for macos - '
+          'you can reconfigure this by running the FlutterFire CLI again.',
+        );
+      case TargetPlatform.windows:
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for windows - '
+          'you can reconfigure this by running the FlutterFire CLI again.',
+        );
+      case TargetPlatform.linux:
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for linux - '
+          'you can reconfigure this by running the FlutterFire CLI again.',
+        );
+      default:
+        throw UnsupportedError(
+          'DefaultFirebaseOptions are not supported for this platform.',
+        );
+    }
+  }
+
+  static const FirebaseOptions android = FirebaseOptions(
+    apiKey: 'AIzaSyCCEXdayuS8qvdCEXXfrnyKHjAgqCJj_mQ',
+    appId: '1:678415717573:android:8a9fb25b602d756ae2ccac',
+    messagingSenderId: '678415717573',
+    projectId: 'qr-attendance-system-2c15d',
+    storageBucket: 'qr-attendance-system-2c15d.firebasestorage.app',
+  );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyB33kwjwm01iecJPlzT8VsMNOyhc1wKuCw',
+    appId: '1:678415717573:ios:b72187824a405e3ce2ccac',
+    messagingSenderId: '678415717573',
+    projectId: 'qr-attendance-system-2c15d',
+    storageBucket: 'qr-attendance-system-2c15d.firebasestorage.app',
+    iosBundleId: 'com.tisting.ntcatrack',
+  );
+}

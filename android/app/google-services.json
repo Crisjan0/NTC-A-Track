@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "678415717573",
+    "project_id": "qr-attendance-system-2c15d",
+    "storage_bucket": "qr-attendance-system-2c15d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:678415717573:android:8a9fb25b602d756ae2ccac",
+        "android_client_info": {
+          "package_name": "com.ntc.atrack"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCCEXdayuS8qvdCEXXfrnyKHjAgqCJj_mQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

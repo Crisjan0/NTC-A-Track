@@ -4,9 +4,9 @@ A complete Flutter attendance app with two roles — **Admin** and **Student** �
 built for a local demo. Attendance is recorded by scanning each student's QR
 code with the device camera.
 
-The database is **100% local** (SQLite via `sqflite`) — no server, no internet,
-and no Firebase required. Everything runs on the device, which makes it ideal
-for classroom demos and presentations.
+The database is **Firebase Cloud Firestore** — admin accounts, students,
+events and attendance sync through Firestore. Seed data is created
+automatically on first launch (see demo accounts below).
 
 ## ✨ Features
 
@@ -66,36 +66,62 @@ instead of crashing.
 `ios/Runner/Info.plist` includes `NSCameraUsageDescription`, so iOS builds are
 ready to go as well.
 
-## 🗄️ Database (local demo)
+## 🗄️ Database (Firebase Cloud Firestore + Auth)
 
-- **Engine:** SQLite through `sqflite`, stored on-device at
-  `attendance_system.db` (created on first run).
-- **Tables:**
-  - `users` — admin account (username, salted password hash, role)
-  - `students` — student records + credentials (student ID, name, course, year
-    level, salted password hash)
-  - `attendance` — one row per student per day
-    (`UNIQUE (student_id, date)` blocks duplicates at the DB level)
-- **Seed data** is inserted on first launch (see demo accounts above).
-- To start fresh: uninstall the app or delete the database file.
+- **Collections:** `users`, `students`, `courses`, `events`, `attendance`,
+  plus `authdir` (login directory) and `roles` (per-account access records).
+- **Auth:** Firebase Authentication (Email/Password provider) is the login
+  gate. Each admin/student owns a synthetic versioned login
+  (`a_<id>.v1@ntc-atrack.local`); `authdir` maps username / student ID to
+  the current login, `roles` ties each Auth uid to `admin` / `student`.
+  Passwords live only in Firebase Auth.
+- **Rules:** see `firestore.rules` — role-based. Admins can read/write
+  everything; students can read (never write); `authdir` lookups are public
+  (no secrets inside); unwprovisioned accounts are denied everywhere.
+- **Seed data** (admin `admin` / `admin123`, 5 students / `student123`) is
+  inserted on first launch, including Auth accounts and roles.
+
+### Firebase setup (one time, in order)
+
+1. Console > your project > **Authentication > Get started > Sign-in
+   method > Email/Password > Enable > Save**.
+2. If the database already has pre-Auth data, **delete all documents**
+   (or the whole database) so the seed can re-run with Auth accounts.
+3. Keep the **open** rules published, run the app once (seed provisions
+   everything), verify login works.
+4. Paste `firestore.rules` into **Firestore > Rules > Publish** to lock it.
+5. To wipe and start over later: temporarily re-publish open rules, wipe,
+   run once, re-publish locked rules.
+
+### Firebase setup (one time, in order)
+
+1. Console > your project > **Authentication > Get started > Sign-in
+   method > Email/Password > Enable > Save**.
+2. If the database already has pre-Auth data, **delete all documents**
+   (or the whole database) so the seed can re-run with Auth accounts.
+3. Keep the **open** rules published, run the app once (seed provisions
+   everything), verify login works.
+4. Paste `firestore.rules` into **Firestore > Rules > Publish** to lock it.
+5. To wipe and start over later: temporarily re-publish open rules, wipe,
+   run once, re-publish locked rules.
 
 ### Data model
 
 ```
 students (1) ──────── (N) attendance
-student_id  PK, UNIQUE     student_id   FK → students.student_id (CASCADE)
+student_id  text, UNIQUE     student_id   text (e.g. 2026-0001)
 last_name                  date         yyyy-MM-dd
 first_name                 time         HH:mm
 course                     status       PRESENT / ABSENT
-year_level                 created_at
-password_hash / salt
+year_level                 check_type   PRESENT / AM_IN / AM_OUT / PM_IN / PM_OUT
+password_hash / salt       event_id     event document ID
 ```
 
 ## 📦 Packages used
 
 | Package            | Purpose                                        |
 | ------------------ | ---------------------------------------------- |
-| `sqflite` + `path` | Local SQLite database                          |
+| `firebase_core` + `cloud_firestore` | Cloud database (users, students, events, attendance) |
 | `qr_flutter`       | QR code generation (renders Student ID)        |
 | `mobile_scanner`   | Camera QR scanning (Android/iOS, ML Kit)       |
 | `shared_preferences` | Persists the login session across restarts   |
@@ -118,7 +144,7 @@ lib/
 │   └── student/            # Dashboard, My QR, My Attendance, Profile —
 │                           # wrapped in StudentShell (bottom nav)
 ├── services/
-│   ├── database_service.dart   # SQLite schema, seeding, queries
+│   ├── firebase_database_service.dart # Firestore collections, seeding, queries
 │   ├── auth_service.dart       # Login/logout per role, hashing
 │   ├── student_service.dart    # Student CRUD + search/filter
 │   ├── attendance_service.dart # Scan→record, duplicate checks, stats
@@ -132,8 +158,8 @@ lib/
 **Admin records attendance**
 1. Admin opens **Scan** → camera opens (`mobile_scanner`).
 2. A QR code is decoded → its payload is the Student ID (e.g. `2026-0001`).
-3. The app looks the student up in SQLite.
-4. If the student already has a record **today**, it shows
+3. The app looks the student up in Firestore.
+4. If the student already has a record **today for the active event**, it shows
    "Attendance Already Recorded" — no new row is created.
 5. Otherwise a `PRESENT` row is inserted and the confirmation screen shows the
    student's details, date and time.
@@ -152,13 +178,13 @@ before rendering, so a student can never reach admin features by navigating.
 flutter test
 ```
 
-Runs a boot/smoke widget test plus service-level tests (auth, CRUD, duplicate
-attendance prevention, stats) against an in-memory SQLite database.
+Runs a boot/smoke widget test plus unit tests (CSV parsing, login rate
+limiter). Firestore integration tests need a configured Firebase project /
+emulator.
 
 ## 📝 Notes for the demo
 
-- The camera scanner needs a real device; the Android emulator camera can scan
-  from a still image feed if configured.
-- Since everything is local, attendance "today" follows the device clock — a
-  nice trick for demos is scanning before/after midnight to show the
-  duplicate-prevention and per-day reset behavior.
+- Attendance "today" follows the device clock — a nice trick for demos is
+  scanning before/after midnight to show the duplicate-prevention and
+  per-day reset behavior. The scanner needs a real device; the Android
+  emulator camera can scan from a still image feed if configured.

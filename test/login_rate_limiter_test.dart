@@ -1,33 +1,20 @@
 import 'package:attendancesystem/screens/auth/login_screen.dart';
-import 'package:attendancesystem/services/auth_service.dart';
-import 'package:attendancesystem/services/database_service.dart';
 import 'package:attendancesystem/services/login_rate_limiter.dart';
-import 'package:attendancesystem/services/session_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:attendancesystem/widgets/custom_button.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUpAll(() {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  });
-
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    DatabaseService.overrideDatabasePath = inMemoryDatabasePath;
-    await DatabaseService.resetForTesting();
-    SessionService.instance.clear();
     LoginRateLimiter.lockDuration = const Duration(minutes: 5);
   });
 
   tearDown(() async {
-    await DatabaseService.resetForTesting();
     LoginRateLimiter.lockDuration = const Duration(minutes: 5);
   });
 
@@ -89,57 +76,6 @@ void main() {
       expect(await LoginRateLimiter.instance.remainingAttempts('2026-0001'), 3);
       expect(await LoginRateLimiter.instance.remainingAttempts('admin'),
           LoginRateLimiter.maxAttempts);
-    });
-  });
-
-  /// Awaits a login that is expected to fail with [T]; fails the test if it
-  /// succeeds or throws a different exception.
-  Future<void> expectLoginThrows<T extends Exception>(
-    String identifier,
-    String password,
-  ) async {
-    try {
-      await AuthService.instance.loginAuto(identifier, password);
-      fail('expected $T but login succeeded');
-    } on T {
-      // expected
-    }
-  }
-
-  group('AuthService integration', () {
-    test('locked identifier is rejected even with the correct password',
-        () async {
-      // 4 wrong attempts → plain AuthException.
-      for (var i = 0; i < LoginRateLimiter.maxAttempts - 1; i++) {
-        await expectLoginThrows<AuthException>('2026-0001', 'wrong-pass');
-      }
-      // 5th wrong attempt triggers the lock.
-      await expectLoginThrows<RateLimitException>('2026-0001', 'wrong-pass');
-      // Even the correct password is now rejected.
-      await expectLoginThrows<RateLimitException>('2026-0001', 'student123');
-    });
-
-    test('successful login clears failures and unknown accounts are not counted',
-        () async {
-      // Unknown account: not found → not counted toward a lock.
-      await expectLoginThrows<AuthException>('9999-9999', 'x');
-      expect(
-        await LoginRateLimiter.instance.remainingAttempts('9999-9999'),
-        LoginRateLimiter.maxAttempts,
-      );
-
-      // Two wrong passwords for a real student…
-      for (var i = 0; i < 2; i++) {
-        await expectLoginThrows<AuthException>('2026-0001', 'wrong');
-      }
-      // …then a correct login resets the counter.
-      final session = await AuthService.instance
-          .loginAuto('2026-0001', 'student123');
-      expect(session.isStudent, isTrue);
-      expect(
-        await LoginRateLimiter.instance.remainingAttempts('2026-0001'),
-        LoginRateLimiter.maxAttempts,
-      );
     });
   });
 

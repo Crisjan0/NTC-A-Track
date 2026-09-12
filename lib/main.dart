@@ -4,13 +4,21 @@ import 'package:flutter/services.dart';
 import 'screens/admin/admin_shell.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/student/student_shell.dart';
+import 'services/database_service_factory.dart';
 import 'services/session_service.dart';
 import 'utils/app_theme.dart';
 import 'widgets/glass_panel.dart';
 import 'widgets/liquid_background.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await DatabaseServiceFactory.initialize();
+  try {
+    await DatabaseServiceFactory.instance.seedDemoData();
+  } catch (_) {
+    // Seeding is best effort (e.g. offline first launch) — the app still
+    // boots to login and every screen surfaces its own errors.
+  }
   runApp(const AttendanceApp());
 }
 

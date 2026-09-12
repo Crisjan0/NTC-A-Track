@@ -8,7 +8,7 @@ import '../utils/constants.dart';
 /// several events in a day and to scan Time In / Time Out for events with
 /// the AM/PM flow.
 class Attendance {
-  final int? id;
+  final String? id;
   final String studentId;
   final DateTime date;
   final DateTime time;
@@ -17,7 +17,7 @@ class Attendance {
   /// What this record is: [CheckType.present] for one-time events, or one
   /// of the AM/PM Time In / Time Out combinations for in/out events.
   final String checkType;
-  final int? eventId;
+  final String? eventId;
   final DateTime createdAt;
 
   // Joined student fields (populated by queries that JOIN students).
@@ -43,18 +43,48 @@ class Attendance {
     this.eventName,
   });
 
+  Attendance copyWith({
+    String? id,
+    String? studentId,
+    DateTime? date,
+    DateTime? time,
+    String? status,
+    String? checkType,
+    String? eventId,
+    DateTime? createdAt,
+    String? studentName,
+    String? course,
+    String? yearLevel,
+    String? eventName,
+  }) {
+    return Attendance(
+      id: id ?? this.id,
+      studentId: studentId ?? this.studentId,
+      date: date ?? this.date,
+      time: time ?? this.time,
+      status: status ?? this.status,
+      checkType: checkType ?? this.checkType,
+      eventId: eventId ?? this.eventId,
+      createdAt: createdAt ?? this.createdAt,
+      studentName: studentName ?? this.studentName,
+      course: course ?? this.course,
+      yearLevel: yearLevel ?? this.yearLevel,
+      eventName: eventName ?? this.eventName,
+    );
+  }
+
   factory Attendance.fromMap(Map<String, dynamic> map) {
     final date = DateTime.parse(map['date'] as String);
     final timeStr = map['time'] as String;
     final timeParts = timeStr.split(':').map(int.parse).toList();
     return Attendance(
-      id: map['id'] as int?,
-      studentId: map['student_id'] as String,
+      id: map['id']?.toString(),
+      studentId: map['student_id'].toString(),
       date: date,
       time: DateTime(date.year, date.month, date.day, timeParts[0], timeParts[1]),
       status: map['status'] as String? ?? 'PRESENT',
       checkType: map['check_type'] as String? ?? CheckType.present,
-      eventId: map['event_id'] as int?,
+      eventId: map['event_id']?.toString(),
       createdAt: DateTime.parse(map['created_at'] as String),
       studentName: map['full_name'] as String?,
       course: map['course'] as String?,
